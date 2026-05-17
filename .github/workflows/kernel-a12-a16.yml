@@ -34,7 +34,7 @@ jobs:
     needs: create-release
     strategy:
       fail-fast: false
-      max-parallel: 5               # 控制并发数，避免磁盘/内存不足
+      max-parallel: 8               # 控制并发数，避免磁盘/内存不足
       matrix:
         include:
           # ================== 5.10 (Android 12) ==================
