@@ -1,0 +1,75 @@
+name: 内核源码拉取-自定义
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      # ==================== 内核版本配置 ====================
+      android_version:
+        description: "Android 版本"
+        required: true
+        type: choice
+        options:
+          - android12
+          - android13
+          - android14
+          - android15
+          - android16
+        default: android12
+      kernel_version:
+        description: "内核版本"
+        required: true
+        type: choice
+        options:
+          - "5.10"
+          - "5.15"
+          - "6.1"
+          - "6.6"
+          - "6.12"
+        default: "5.10"
+      sub_level:
+        description: "子版本号 (如 66, 198, X)"
+        required: true
+        type: string
+        default: "66"
+      os_patch_level:
+        description: "安全补丁级别 (如 2022-01, lts)"
+        required: true
+        type: string
+        default: "2022-01"
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.set_tag.outputs.release_tag }}
+    steps:
+      - name: 生成 Release 标签
+        id: set_tag
+        run: echo "release_tag=${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.sub_level }}-source-${{ github.run_number }}" >> $GITHUB_OUTPUT
+      - name: 创建 Release（如果不存在）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.set_tag.outputs.release_tag }}"
+          if ! gh release view "$TAG" -R ${{ github.repository }} &>/dev/null; then
+            gh release create "$TAG" -R ${{ github.repository }} \
+              --title "${{ inputs.android_version }} ${{ inputs.kernel_version }}.${{ inputs.sub_level }} 源码 - 运行 #${{ github.run_number }}" \
+              --notes "Android ${{ inputs.android_version }} 内核 ${{ inputs.kernel_version }}.${{ inputs.sub_level }} 安全补丁 ${{ inputs.os_patch_level }} 的完整源码。"
+          else
+            echo "Release $TAG 已存在，跳过创建。"
+          fi
+
+  publish-source:
+    needs: create-release
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      android_version: ${{ inputs.android_version }}
+      kernel_version: ${{ inputs.kernel_version }}
+      sub_level: ${{ inputs.sub_level }}
+      os_patch_level: ${{ inputs.os_patch_level }}
+      release_tag: ${{ needs.create-release.outputs.release_tag }}
