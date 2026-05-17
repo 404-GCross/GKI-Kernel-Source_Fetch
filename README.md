@@ -1,9 +1,9 @@
 <div align="center">
 
-# GKI KernelSU SUSFS
-### 🏮 2026 🐎 Happy New Year! 🏮
+# Kernel-Source_Pull
 
-**自动化构建 GKI 内核 | 集成 KernelSU + SUSFS**
+
+**自动化拉取 GKI 内核
 
 [![Release](https://img.shields.io/github/v/release/zzh20188/GKI_KernelSU_SUSFS?label=Release&style=flat-square&logo=github&logoColor=white&color=2ea44f)](https://github.com/zzh20188/GKI_KernelSU_SUSFS/releases)
 [![Coolapk](https://img.shields.io/badge/Follow-Coolapk-3DDC84?style=flat-square&logo=android&logoColor=white)](http://www.coolapk.com/u/11253396)
