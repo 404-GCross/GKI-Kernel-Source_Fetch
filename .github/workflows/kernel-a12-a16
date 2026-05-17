@@ -1,0 +1,393 @@
+name: 一键拉取所有内核源码 (5.10~6.12)
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.set_tag.outputs.release_tag }}
+    steps:
+      - name: 生成统一 Release 标签
+        id: set_tag
+        run: echo "release_tag=all-kernel-sources-${{ github.run_number }}" >> $GITHUB_OUTPUT
+      - name: 创建 Release（如果不存在）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.set_tag.outputs.release_tag }}"
+          if ! gh release view "$TAG" -R ${{ github.repository }} &>/dev/null; then
+            gh release create "$TAG" -R ${{ github.repository }} \
+              --title "全内核源码合集 - 运行 #${{ github.run_number }}" \
+              --notes "包含 Android 12~16 的 5.10/5.15/6.1/6.6/6.12 内核源码分卷，请下载所有分卷及校验文件后合并解压。"
+          else
+            echo "Release $TAG 已存在，跳过创建。"
+          fi
+
+  pull-sources:
+    name: "${{ matrix.android_version }}-${{ matrix.kernel_version }}.${{ matrix.sub_level }}"
+    needs: create-release
+    strategy:
+      fail-fast: false
+      max-parallel: 5               # 控制并发数，避免磁盘/内存不足
+      matrix:
+        include:
+          # ================== 5.10 (Android 12) ==================
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "66"
+            os_patch_level: "2022-01"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "81"
+            os_patch_level: "2022-03"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "101"
+            os_patch_level: "2022-04"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "110"
+            os_patch_level: "2022-07"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "117"
+            os_patch_level: "2022-09"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "136"
+            os_patch_level: "2022-11"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "149"
+            os_patch_level: "2023-01"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "160"
+            os_patch_level: "2023-03"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "168"
+            os_patch_level: "2023-04"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "177"
+            os_patch_level: "2023-07"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "185"
+            os_patch_level: "2023-09"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "198"
+            os_patch_level: "2024-01"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "205"
+            os_patch_level: "2024-03"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "209"
+            os_patch_level: "2024-05"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "218"
+            os_patch_level: "2024-08"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "226"
+            os_patch_level: "2024-11"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "233"
+            os_patch_level: "2025-02"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "236"
+            os_patch_level: "2025-05"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "237"
+            os_patch_level: "2025-06"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "240"
+            os_patch_level: "2025-09"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "246"
+            os_patch_level: "2025-12"
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "X"
+            os_patch_level: "lts"
+
+          # ================== 5.15 (Android 13) ==================
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "74"
+            os_patch_level: "2023-01"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "78"
+            os_patch_level: "2023-03"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "94"
+            os_patch_level: "2023-05"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "104"
+            os_patch_level: "2023-07"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "119"
+            os_patch_level: "2023-09"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "123"
+            os_patch_level: "2023-11"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "137"
+            os_patch_level: "2024-01"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "144"
+            os_patch_level: "2024-03"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "148"
+            os_patch_level: "2024-05"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "149"
+            os_patch_level: "2024-07"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "151"
+            os_patch_level: "2024-08"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "153"
+            os_patch_level: "2024-09"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "167"
+            os_patch_level: "2024-11"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "170"
+            os_patch_level: "2025-01"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "178"
+            os_patch_level: "2025-03"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "180"
+            os_patch_level: "2025-05"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "185"
+            os_patch_level: "2025-07"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "189"
+            os_patch_level: "2025-09"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "194"
+            os_patch_level: "2025-12"
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "X"
+            os_patch_level: "lts"
+
+          # ================== 6.1 (Android 14) ==================
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "25"
+            os_patch_level: "2023-10"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "43"
+            os_patch_level: "2023-11"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "57"
+            os_patch_level: "2024-01"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "68"
+            os_patch_level: "2024-03"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "75"
+            os_patch_level: "2024-05"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "78"
+            os_patch_level: "2024-06"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "84"
+            os_patch_level: "2024-07"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "90"
+            os_patch_level: "2024-08"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "93"
+            os_patch_level: "2024-09"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "99"
+            os_patch_level: "2024-10"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "112"
+            os_patch_level: "2024-11"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "115"
+            os_patch_level: "2024-12"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "118"
+            os_patch_level: "2025-01"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "124"
+            os_patch_level: "2025-02"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "128"
+            os_patch_level: "2025-03"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "129"
+            os_patch_level: "2025-04"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "134"
+            os_patch_level: "2025-05"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "138"
+            os_patch_level: "2025-06"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "141"
+            os_patch_level: "2025-07"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "145"
+            os_patch_level: "2025-09"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "157"
+            os_patch_level: "2025-12"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "162"
+            os_patch_level: "2026-03"
+          - android_version: android14
+            kernel_version: "6.1"
+            sub_level: "X"
+            os_patch_level: "lts"
+
+          # ================== 6.6 (Android 15) ==================
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "50"
+            os_patch_level: "2024-10"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "56"
+            os_patch_level: "2024-11"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "57"
+            os_patch_level: "2024-12"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "58"
+            os_patch_level: "2025-01"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "66"
+            os_patch_level: "2025-02"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "77"
+            os_patch_level: "2025-03"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "82"
+            os_patch_level: "2025-04"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "87"
+            os_patch_level: "2025-05"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "89"
+            os_patch_level: "2025-06"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "92"
+            os_patch_level: "2025-07"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "98"
+            os_patch_level: "2025-09"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "102"
+            os_patch_level: "2025-10"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "118"
+            os_patch_level: "2026-01"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "127"
+            os_patch_level: "2026-04"
+          - android_version: android15
+            kernel_version: "6.6"
+            sub_level: "X"
+            os_patch_level: "lts"
+
+          # ================== 6.12 (Android 16) ==================
+          - android_version: android16
+            kernel_version: "6.12"
+            sub_level: "23"
+            os_patch_level: "2025-06"
+          - android_version: android16
+            kernel_version: "6.12"
+            sub_level: "30"
+            os_patch_level: "2025-07"
+          - android_version: android16
+            kernel_version: "6.12"
+            sub_level: "38"
+            os_patch_level: "2025-09"
+          - android_version: android16
+            kernel_version: "6.12"
+            sub_level: "58"
+            os_patch_level: "2025-12"
+
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      android_version: ${{ matrix.android_version }}
+      kernel_version: ${{ matrix.kernel_version }}
+      sub_level: ${{ matrix.sub_level }}
+      os_patch_level: ${{ matrix.os_patch_level }}
+      release_tag: ${{ needs.create-release.outputs.release_tag }}
