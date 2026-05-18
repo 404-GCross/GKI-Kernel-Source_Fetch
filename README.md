@@ -49,7 +49,7 @@ bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source
 
 合并解压：将分卷文件合并为一个完整的 tar.gz 包并解压
 
-📊 支持的内核版本
+## 📊 支持的内核版本
 Android 版本	内核版本	子版本示例
 Android 12	5.10	66 / 81 / 101 / 110 / 198 / 246 等 22 个版本
 Android 13	5.15	74 / 78 / 94 / 104 / 170 / 194 等 20 个版本
@@ -58,10 +58,10 @@ Android 15	6.6	50 / 56 / 57 / 58 / 77 / 127 等 15 个版本
 Android 16	6.12	23 / 30 / 38 / 58
 包含 lts 长期支持版本（小版本号标记为 X）。
 
-🔗 相关链接
+## 🔗 相关链接
 原项目：[GKI_KernelSU_SUSFS - 自动化构建 GKI 内核 | 集成 KernelSU + SUSFS](https://github.com/zzh20188/GKI_KernelSU_SUSFS)
 
 
 
-📄 License
+## 📄 License
 本项目基于 GNU General Public License v2.0 开源。详见 LICENSE 文件。
