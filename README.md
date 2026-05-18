@@ -28,6 +28,7 @@ bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/downl
 ```bash
 bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
 ```
+脚本使用deepseek生成，测试无问题，有问题欢迎反馈
 
 ## 📥 下载源码包
 
