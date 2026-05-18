@@ -20,11 +20,11 @@
 在 Linux 机器上运行以下命令即可拉取内核源码：
 
 
-# 方式一：直连 GitHub
+方式一：直连 GitHub
 ```bash
 bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
 ```
-# 方式二：镜像加速（国内推荐，直连失败时使用）
+方式二：镜像加速（国内推荐，直连失败时使用）
 ```bash
 bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
 ```
@@ -37,17 +37,17 @@ bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source
 
 交互式脚本提供以下功能：
 
-# 版本选择：支持 Android 12 ~ 16，内核版本 5.10 / 5.15 / 6.1 / 6.6 / 6.12
+版本选择：支持 Android 12 ~ 16，内核版本 5.10 / 5.15 / 6.1 / 6.6 / 6.12
 
-# 镜像加速：内置多个国内可用的 GitHub 镜像源
+镜像加速：内置多个国内可用的 GitHub 镜像源
 
-# 测速择优：自动测试各镜像下载速度，按速度排序供选择
+测速择优：自动测试各镜像下载速度，按速度排序供选择
 
-# 自定义镜像：支持手动输入任意镜像 URL
+自定义镜像：支持手动输入任意镜像 URL
 
-# 自动校验：下载后自动 SHA256 校验，确保文件完整性
+自动校验：下载后自动 SHA256 校验，确保文件完整性
 
-# 合并解压：将分卷文件合并为一个完整的 tar.gz 包并解压
+合并解压：将分卷文件合并为一个完整的 tar.gz 包并解压
 
 📊 支持的内核版本
 Android 版本	内核版本	子版本示例
