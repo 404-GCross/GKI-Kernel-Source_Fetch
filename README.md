@@ -19,14 +19,15 @@
 
 在 Linux 机器上运行以下命令即可拉取内核源码：
 
-```bash
+
 # 方式一：直连 GitHub
-bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
-
-# 方式二：镜像加速（国内推荐，直连失败时使用）
-bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
-
 ```bash
+bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
+```
+# 方式二：镜像加速（国内推荐，直连失败时使用）
+```bash
+bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
+```
 
 ## 📥 下载源码包
 
