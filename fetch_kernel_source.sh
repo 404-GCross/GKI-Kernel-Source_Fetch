@@ -105,12 +105,12 @@ main() {
     echo -e "${GREEN}目标版本：${vid}${NC}"
 
     # ---------- 测速（单源 ≤ 30s） ----------
-    echo -e "${YELLOW}是否对镜像源进行测速（单源最长 30 秒，约 25.1MB 测试文件）？(y/n) [n]:${NC}"
+    echo -e "${YELLOW}是否对镜像源进行测速（测试时间较长，单源最长 30 秒，约 25.1MB 测试文件）？(y/n) [n]:${NC}"
     read -r do_speedtest
     local speed_results=()
 
     if [[ "$do_speedtest" == "y" || "$do_speedtest" == "Y" ]]; then
-        echo -e "${GREEN}正在测速（下载 speedtest.mp4），请稍候...${NC}"
+        echo -e "${GREEN}正在测速（下载 speedtest.mp4），请耐心等待...${NC}"
 
         echo -n "  直连 ... "
         local direct_out
