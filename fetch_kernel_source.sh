@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ================== 配置 ==================
 REPO="404-GCross/Kernel-Source_Pull"
-TAG="all-kernel-sources-1"
+TAG="all-kernel-sources-2"
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PWD}/kernel-sources}"
 KEEP_TARBALL="${KEEP_TARBALL:-no}"
