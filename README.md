@@ -26,6 +26,8 @@ bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/downl
 # 方式二：镜像加速（国内推荐，直连失败时使用）
 bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
 
+```bash
+
 ## 📥 下载源码包
 
 所有 GKI 内核源码分卷均可在 Releases 页面 直接下载。
