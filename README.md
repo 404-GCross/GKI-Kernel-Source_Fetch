@@ -1,22 +1,29 @@
-<div align="center">
-
 # Kernel-Source_Pull
 
+**自动化拉取 GKI 内核源码**
 
-自动化拉取 GKI 内核
+[![GitHub Release](https://img.shields.io/github/v/release/404-GCross/Kernel-Source_Pull?style=flat-square)](https://github.com/404-GCross/Kernel-Source_Pull/releases)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 
-[![Coolapk](https://img.shields.io/badge/Follow-Coolapk-3DDC84?style=flat-square&logo=android&logoColor=white)](https://www.coolapk.com/u/24499587)
+---
 
+## 📖 项目简介
+
+本项目基于 [GKI_KernelSU_SUSFS](https://github.com/zzh20188/GKI_KernelSU_SUSFS) 项目修改而来，将其内核构建流程简化为 **内核源码拉取** 。
 
 
 ---
 
-</div>
-基于GKI_KernelSU_SUSFS项目修改而来的GKI内核源码拉取项目
-原项目：https://github.com/zzh20188/GKI_KernelSU_SUSFS
-在linux机器里运行脚本即可拉取内核源码
-直接运行：bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
-如果下载不了脚本就试试这个：bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
+## 🚀 快速开始
 
+在 Linux 机器上运行以下命令即可拉取内核源码：
 
-</div>
+### 方式一：直连 GitHub
+
+```bash
+bash <(curl -sSL https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
+
+### 方式二：GitHub 镜像源
+
+```bash
+bash <(curl -sSL https://gh.ddlc.top/https://github.com/404-GCross/Kernel-Source_Pull/releases/download/all-kernel-sources-1/fetch_kernel_source.sh)
