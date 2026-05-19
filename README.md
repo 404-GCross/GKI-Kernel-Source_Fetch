@@ -1,4 +1,4 @@
-# Kernel-Source_Pull
+# GKI-Kernel-Source_Fetch
 
 **自动化拉取 GKI 内核源码 | 基于 GKI_KernelSU_SUSFS 项目修改**
 
