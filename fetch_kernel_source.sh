@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
+# ============================================================
+# 脚本: fetch_kernel_source.sh
+# 功能: 从固定 Release 拉取 GKI 内核源码分卷，自动校验、合并、解压
+# 支持镜像加速（可选），单源测速 ≤ 30 秒
+# 依赖: curl, awk (gawk), sha256sum, tar
+# ============================================================
 set -euo pipefail
 
-# ================== 配置 ==================
+# -------------------- 固定仓库与标签 --------------------
 REPO="404-GCross/Kernel-Source_Pull"
 TAG="all-kernel-sources-2"
+# --------------------------------------------------------
+
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PWD}/kernel-sources}"
 KEEP_TARBALL="${KEEP_TARBALL:-no}"
@@ -34,17 +42,24 @@ declare -A VERSIONS=(
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
+# 增强依赖检查：确保 curl、awk 等存在
 check_deps() {
-    if ! command -v curl &>/dev/null; then
-        echo -e "${YELLOW}需要 curl，正在安装...${NC}"
+    local missing=()
+    if ! command -v curl &>/dev/null; then missing+=("curl"); fi
+    if ! command -v awk &>/dev/null; then missing+=("gawk"); fi
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo -e "${YELLOW}缺少依赖: ${missing[*]}，正在尝试安装...${NC}"
         if command -v apt-get &>/dev/null; then
-            sudo apt-get update -qq && sudo apt-get install -y curl
+            sudo apt-get update -qq && sudo apt-get install -y ${missing[*]}
+        elif command -v dnf &>/dev/null; then
+            sudo dnf install -y ${missing[*]}
         elif command -v yum &>/dev/null; then
-            sudo yum install -y curl
+            sudo yum install -y ${missing[*]}
         elif command -v pacman &>/dev/null; then
-            sudo pacman -S --noconfirm curl
+            sudo pacman -S --noconfirm ${missing[*]}
         else
-            echo -e "${RED}请手动安装 curl${NC}"; exit 1
+            echo -e "${RED}无法自动安装，请手动安装: ${missing[*]}${NC}"
+            exit 1
         fi
     fi
 }
@@ -59,7 +74,6 @@ select_option() {
     done
 }
 
-# 测速：下载 speedtest.mp4，计算平均速度（KB/s）和耗时，单源超时 30 秒
 speed_test() {
     local mirror="$1"
     local url="${mirror}${BASE_RAW}/${SPEEDTEST_FILE}"
@@ -93,7 +107,6 @@ download() {
 main() {
     check_deps
 
-    # ---------- 选择版本 ----------
     IFS=$'\n' majors=($(for k in "${!VERSIONS[@]}"; do echo "$k"; done | sort))
     local major=$(select_option "选择内核大版本：" "${majors[@]}")
 
@@ -104,8 +117,7 @@ main() {
     local sha="kernel-source-${vid}.tar.gz.sha256"
     echo -e "${GREEN}目标版本：${vid}${NC}"
 
-    # ---------- 测速（单源 ≤ 30s） ----------
-    echo -e "${YELLOW}是否对镜像源进行测速（测试时间较长，单源最长 30 秒，约 25.1MB 测试文件）？(y/n) [n]:${NC}"
+    echo -e "${YELLOW}是否对镜像源进行测速（单源最长 30 秒，约 25.1MB 测试文件）？(y/n) [n]:${NC}"
     read -r do_speedtest
     local speed_results=()
 
@@ -197,7 +209,6 @@ main() {
 
     echo -e "${GREEN}使用源：${MIRROR:-直连}${NC}"
 
-    # ---------- 下载、校验、合并、解压 ----------
     local tmpdir=$(mktemp -d -t kernel-dl-XXXXXX)
     trap "rm -rf '$tmpdir'" EXIT
 
