@@ -17,7 +17,8 @@ OUTPUT_DIR="${OUTPUT_DIR:-${PWD}/kernel-sources}"
 KEEP_TARBALL="${KEEP_TARBALL:-no}"
 FLAT_OUTPUT="${FLAT_OUTPUT:-no}"
 
-SPEEDTEST_FILE="speedtest.mp4"          # 实际大小 25.1 MB
+# 测速专用文件（使用 raw 链接）
+SPEEDTEST_URL="https://raw.githubusercontent.com/404-GCross/GKI-Kernel-Source_Fetch/main/speedtest.mp4"
 
 MIRRORS=(
     "https://gh-proxy.com/"
@@ -76,7 +77,7 @@ select_option() {
 
 speed_test() {
     local mirror="$1"
-    local url="${mirror}${BASE_RAW}/${SPEEDTEST_FILE}"
+    local url="${mirror}${SPEEDTEST_URL}"
     local tmpfile=$(mktemp)
     local start end size duration speed
     start=$(date +%s.%N)
