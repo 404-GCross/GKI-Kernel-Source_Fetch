@@ -390,5 +390,4 @@ jobs:
           files: |
             ${{ env.ARCHIVE_BASE }}.part*
             ${{ env.ARCHIVE_BASE }}.sha256
-            fetch_kernel_source.sh
           fail_on_unmatched_files: false
