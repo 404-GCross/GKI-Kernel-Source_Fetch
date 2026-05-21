@@ -15,21 +15,21 @@ jobs:
     outputs:
       release_tag: ${{ steps.set_tag.outputs.release_tag }}
     steps:
-      - name: 生成统一 Release 标签
+      - name: 生成唯一 Release 标签
         id: set_tag
-        run: echo "release_tag=all-kernel-sources-${{ github.run_number }}" >> $GITHUB_OUTPUT
-      - name: 创建 Release（如果不存在）
+        run: |
+          TAG="all-kernel-sources-$(date +%Y%m%d)-${{ github.run_id }}"
+          echo "release_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "标签：$TAG"
+
+      - name: 创建 Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ steps.set_tag.outputs.release_tag }}"
-          if ! gh release view "$TAG" -R ${{ github.repository }} &>/dev/null; then
-            gh release create "$TAG" -R ${{ github.repository }} \
-              --title "全内核源码合集 - 运行 #${{ github.run_number }}" \
-              --notes "包含 Android 12~16 的 5.10/5.15/6.1/6.6/6.12 内核源码分卷，请下载所有分卷及校验文件后合并解压。"
-          else
-            echo "Release $TAG 已存在，跳过创建。"
-          fi
+          gh release create "$TAG" -R ${{ github.repository }} \
+            --title "全内核源码合集 - $(date +%F)" \
+            --notes "包含 Android 12~16 的 5.10/5.15/6.1/6.6/6.12 内核源码分卷，请下载所有分卷及校验文件后合并解压。"
 
   pull-sources:
     name: "${{ matrix.android_version }}-${{ matrix.kernel_version }}.${{ matrix.sub_level }}"
@@ -394,7 +394,7 @@ jobs:
       os_patch_level: ${{ matrix.os_patch_level }}
       release_tag: ${{ needs.create-release.outputs.release_tag }}
 
-  # 自动更新脚本中的 TAG
+  # 更新脚本仓库中的 TAG 并推送
   update-script:
     runs-on: ubuntu-latest
     needs: [create-release, pull-sources]
@@ -405,12 +405,16 @@ jobs:
         with:
           repository: 404-GCross/GKI-Kernel-Source_Fetch
           ref: main
-          token: ${{ secrets.SCRIPT_REPO_PAT }}
+          token: ${{ secrets.SCRIPT_REPO_PAT }}   # 必须配置此 Secret
 
       - name: 修改 TAG 变量
         run: |
           NEW_TAG="${{ needs.create-release.outputs.release_tag }}"
-          echo "正在将 TAG 更新为: $NEW_TAG"
+          if [ -z "$NEW_TAG" ]; then
+            echo "错误：release_tag 为空！"
+            exit 1
+          fi
+          echo "更新 TAG 为：$NEW_TAG"
           sed -i "s/^TAG=.*/TAG=\"$NEW_TAG\"/" fetch_kernel_source.sh
 
       - name: 提交并推送
@@ -418,5 +422,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add fetch_kernel_source.sh
-          git diff --cached --quiet || git commit -m "自动更新 TAG 为 ${{ needs.create-release.outputs.release_tag }}"
+          git diff --cached --quiet || git commit -m "自动更新 TAG 为 $NEW_TAG"
           git push origin main
