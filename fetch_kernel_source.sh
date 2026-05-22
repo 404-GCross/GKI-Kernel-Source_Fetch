@@ -118,7 +118,7 @@ main() {
     local sha="kernel-source-${vid}.tar.gz.sha256"
     echo -e "${GREEN}目标版本：${vid}${NC}"
 
-    echo -e "${YELLOW}是否对镜像源进行测速（单源最长 30 秒，约 20 MB 测试文件）？(y/n) [n]:${NC}"
+    echo -e "${YELLOW}是否对镜像源进行测速（单源最长 30 秒，约 23 MB 测试文件）？(y/n) [n]:${NC}"
     read -r do_speedtest
     local speed_results=()
 
