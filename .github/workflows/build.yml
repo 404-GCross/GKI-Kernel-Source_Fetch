@@ -115,8 +115,8 @@ jobs:
       - name: 分卷压缩内核源码
         run: |
           ARCHIVE_BASE="kernel-source-${{ env.REAL_CONFIG }}.tar.gz"
-          echo "压缩 $KERNEL_ROOT 到分卷，排除 .repo 目录"
-          tar czf - -C "$KERNEL_ROOT" --exclude='.repo' . | split -b 2000M - "$GITHUB_WORKSPACE/$ARCHIVE_BASE.part"
+          echo "压缩 $KERNEL_ROOT 到分卷，排除 .repo 和 .git 目录"
+          tar czf - -C "$KERNEL_ROOT" --exclude='.repo' --exclude-vcs . | split -b 2000M - "$GITHUB_WORKSPACE/$ARCHIVE_BASE.part"
           echo "分卷列表："
           ls -lh "$GITHUB_WORKSPACE/$ARCHIVE_BASE.part"*
           cd "$GITHUB_WORKSPACE"
