@@ -65,6 +65,9 @@ check_deps() {
     fi
 }
 
+# 确保临时目录使用磁盘空间而非 tmpfs
+mkdir -p "${TMPDIR:-$PWD/.tmp}"
+
 select_option() {
     local prompt="$1"; shift
     local opts=("$@")
@@ -78,7 +81,7 @@ select_option() {
 speed_test() {
     local mirror="$1"
     local url="${mirror}${SPEEDTEST_URL}"
-    local tmpfile=$(mktemp)
+    local tmpfile=$(mktemp --tmpdir="${TMPDIR:-$PWD/.tmp}")
     local start end size duration speed
     start=$(date +%s.%N)
     if curl -fSL --retry 1 --connect-timeout 10 --max-time 30 -o "$tmpfile" "$url" 2>/dev/null; then
@@ -210,7 +213,7 @@ main() {
 
     echo -e "${GREEN}使用源：${MIRROR:-直连}${NC}"
 
-    local tmpdir=$(mktemp -d -t kernel-dl-XXXXXX)
+    local tmpdir=$(mktemp -d --tmpdir="${TMPDIR:-$PWD/.tmp}" kernel-dl-XXXXXX)
     trap "rm -rf '$tmpdir'" EXIT
 
     echo -e "${GREEN}[1/5] 下载校验文件...${NC}"
