@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 0 */3 * *'        # 每3天 UTC 0:00 自动运行
+    - cron: '0 0 */1 * *'        # 每天 UTC 0:00 自动运行
   workflow_dispatch:
 
 jobs:
