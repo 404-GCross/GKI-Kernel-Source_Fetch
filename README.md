@@ -13,6 +13,8 @@
 
 原项目是一个自动化构建 GKI 内核的项目，集成了 KernelSU / MKSU / SukiSU / ReSukiSU / KernelSU-Next + SUSFS 等特性，并支持 Droidspaces 容器、ZRAM 增强、BBG 防格机等功能。本 Fork 项目专注于 **一键拉取 Google 官方 GKI 内核源码**，并将其打包发布至 GitHub Release，方便开发者直接下载使用。
 
+同步时间：每天0:00
+
 ---
 
 ## 🚀 快速开始
