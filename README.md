@@ -24,11 +24,20 @@
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/404-GCross/Kernel-Source_Pull/refs/heads/main/fetch_kernel_source.sh)
 ```
+如果不想要解压
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/404-GCross/Kernel-Source_Pull/refs/heads/main/fetch_kernel_source_no-extract.sh)
+```
 方式二：镜像加速（国内推荐，直连失败时使用）
 ```bash
 bash <(curl -sSL https://gh-proxy.com/https://raw.githubusercontent.com/404-GCross/Kernel-Source_Pull/refs/heads/main/fetch_kernel_source.sh)
 ```
-脚本使用deepseek生成，测试无问题，有问题欢迎反馈
+如果不想要解压
+```bash
+bash <(curl -sSL https://gh-proxy.com/https://raw.githubusercontent.com/404-GCross/Kernel-Source_Pull/refs/heads/main/fetch_kernel_source_no-extract.sh)
+```
+
+脚本使用deepseek生成，测试暂无问题，有问题欢迎反馈
 
 ## 📥 下载源码包
 
