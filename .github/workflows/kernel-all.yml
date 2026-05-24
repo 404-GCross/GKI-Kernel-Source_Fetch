@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 0 */3 * *'        # 每3天 UTC 0:00 自动运行
+    - cron: '0 0 */1 * *'        # 每天 UTC 0:00 自动运行
   workflow_dispatch:
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
     needs: create-release
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 8    #并发数8
       matrix:
         include:
           # ================== 5.10 (Android 12) ==================
@@ -416,11 +416,12 @@ jobs:
           fi
           echo "更新 TAG 为：$NEW_TAG"
           sed -i "s/^TAG=.*/TAG=\"$NEW_TAG\"/" fetch_kernel_source.sh
+          sed -i "s/^TAG=.*/TAG=\"$NEW_TAG\"/" fetch_kernel_source_no-extract.sh
 
       - name: 提交并推送
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add fetch_kernel_source.sh
-          git diff --cached --quiet || git commit -m "自动更新 TAG 为 $NEW_TAG"
+          git add fetch_kernel_source.sh fetch_kernel_source_no-extract.sh
+          git diff --cached --quiet || git commit -m "自动更新 TAG 为 ${{ needs.create-release.outputs.release_tag }}"
           git push origin main

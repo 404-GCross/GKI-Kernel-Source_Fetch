@@ -58,7 +58,7 @@ jobs:
           testing: false
 
       - name: 检出代码仓库
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: 初始化目录与环境变量
         run: |
@@ -125,10 +125,10 @@ jobs:
 
       - name: 上传分卷到统一 Release
         if: inputs.release_tag != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.release_tag }}
-          files: |
-            ${{ env.ARCHIVE_BASE }}.part*
-            ${{ env.ARCHIVE_BASE }}.sha256
-          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ inputs.release_tag }}" \
+            ${{ env.ARCHIVE_BASE }}.part* \
+            ${{ env.ARCHIVE_BASE }}.sha256 \
+            --clobber
