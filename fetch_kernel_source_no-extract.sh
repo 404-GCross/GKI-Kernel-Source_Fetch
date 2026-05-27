@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
-# 脚本: fetch_kernel_source_no-extract.sh
-# 功能: 从固定 Release 拉取 GKI 内核源码分卷，自动校验、合并
-#       默认不解压，仅生成 .tar.gz 压缩包
+# 脚本: fetch_kernel_source.sh
+# 功能: 从固定 Release 拉取 GKI 内核源码分卷，自动校验、合并、解压
 # 支持镜像加速（可选），单源测速 ≤ 30 秒
 # 依赖: curl, awk (gawk), sha256sum, tar
 # ============================================================
@@ -15,11 +14,10 @@ TAG="all-kernel-sources-20260525-26381673427"
 
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PWD}/kernel-sources}"
-KEEP_TARBALL="${KEEP_TARBALL:-yes}"          # 不解压时默认保留 tar.gz
-FLAT_OUTPUT="${FLAT_OUTPUT:-no}"             # 解压时是否扁平输出
-EXTRACT="${EXTRACT:-no}"                     # 是否解压，默认 no
+KEEP_TARBALL="${KEEP_TARBALL:-no}"
+FLAT_OUTPUT="${FLAT_OUTPUT:-no}"
 
-# 测速专用文件
+# 测速专用文件（使用 raw 链接）
 SPEEDTEST_URL="https://raw.githubusercontent.com/404-GCross/GKI-Kernel-Source_Fetch/main/speedtest.mp4"
 
 MIRRORS=(
@@ -67,7 +65,7 @@ check_deps() {
     fi
 }
 
-# 确保临时目录使用磁盘空间而非 tmpfs（WSL 兼容）
+# 确保临时目录使用磁盘空间而非 tmpfs
 mkdir -p "${TMPDIR:-$PWD/.tmp}"
 
 select_option() {
@@ -110,6 +108,28 @@ download() {
     curl -fSL --retry 3 --retry-delay 5 -# -o "$dest" "$url"
 }
 
+# 从 Release 资产列表中获取某个大版本的实际 LTS 子版本号
+resolve_lts_version() {
+    local major="$1"   # 如 android12-5.10
+    local api_url="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
+    local tmpjson=$(mktemp --tmpdir="${TMPDIR:-$PWD/.tmp}")
+    # 下载 Release 信息（匿名，公开仓库可行）
+    if ! curl -sL --retry 2 --connect-timeout 10 "$api_url" -o "$tmpjson"; then
+        echo -e "${RED}无法获取 Release 信息，请检查网络${NC}"
+        return 1
+    fi
+    # 从 assets 的 name 中解析：kernel-source-android12-5.10-123.tar.gz.sha256
+    # 提取出 123（数字子版本），排除 X 本身
+    local real_sub
+    real_sub=$(grep -o "kernel-source-${major}-[0-9]*\.tar\.gz\.sha256" "$tmpjson" | head -n1 | sed "s/kernel-source-${major}-//; s/\.tar\.gz\.sha256//")
+    rm -f "$tmpjson"
+    if [ -z "$real_sub" ]; then
+        echo -e "${RED}未在 Release 中找到 ${major} 的 LTS 真实版本${NC}"
+        return 1
+    fi
+    echo "$real_sub"
+}
+
 main() {
     check_deps
 
@@ -118,6 +138,18 @@ main() {
 
     IFS=' ' read -ra subs <<< "${VERSIONS[$major]}"
     local sub=$(select_option "选择小版本：" "${subs[@]}")
+
+    # 如果选择的是 X，自动获取真实子版本号
+    if [[ "$sub" == "X" ]]; then
+        echo -e "${YELLOW}正在获取 ${major} 的最新 LTS 版本号...${NC}"
+        local resolved
+        resolved=$(resolve_lts_version "$major") || {
+            echo -e "${RED}无法自动确定 LTS 版本，请重新选择或检查网络${NC}"
+            exit 1
+        }
+        echo -e "${GREEN}LTS 真实版本：${resolved}${NC}"
+        sub="$resolved"
+    fi
 
     local vid="${major}-${sub}"
     local sha="kernel-source-${vid}.tar.gz.sha256"
@@ -239,36 +271,26 @@ main() {
     echo -e "  ${GREEN}校验通过${NC}"
 
     local tar="kernel-source-${vid}.tar.gz"
-    echo -e "${GREEN}[4/5] 合并分卷 -> ${tar}${NC}"
+    echo -e "${GREEN}[4/5] 合并分卷...${NC}"
     cat "${parts[@]/#/$tmpdir/}" > "$tmpdir/$tar"
 
-    # 决定解压还是仅保留压缩包
-    if [[ "$EXTRACT" == "yes" ]]; then
-        local dest
-        if [[ "$FLAT_OUTPUT" == "yes" ]]; then
-            dest="$OUTPUT_DIR"
-        else
-            dest="${OUTPUT_DIR}/kernel-source-${vid}"
-        fi
-        mkdir -p "$dest"
-        echo -e "${GREEN}[5/5] 解压到 ${dest}${NC}"
-        tar xzf "$tmpdir/$tar" -C "$dest"
-        if [[ "$KEEP_TARBALL" == "yes" ]]; then
-            mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
-            echo -e "  保留压缩包：${OUTPUT_DIR}/$tar"
-        fi
-        echo -e "\n${GREEN}===== 完成 =====${NC}"
-        echo -e "源码路径：${dest}"
+    local dest
+    if [[ "$FLAT_OUTPUT" == "yes" ]]; then
+        dest="$OUTPUT_DIR"
     else
-        # 默认不解压，保留压缩包
-        mkdir -p "$OUTPUT_DIR"
-        mv "$tmpdir/$tar" "$OUTPUT_DIR/"
-        echo -e "${GREEN}[5/5] 保留压缩包至 ${OUTPUT_DIR}/${tar}${NC}"
-        echo -e "\n${GREEN}===== 完成 =====${NC}"
-        echo -e "压缩包路径：${OUTPUT_DIR}/${tar}"
-        echo -e "如需解压，请设置环境变量 EXTRACT=yes 重新运行，或手动执行："
-        echo -e "  tar xzf ${OUTPUT_DIR}/${tar} -C 目标目录"
+        dest="${OUTPUT_DIR}/kernel-source-${vid}"
     fi
+    mkdir -p "$dest"
+    echo -e "${GREEN}[5/5] 解压到 ${dest}${NC}"
+    tar xzf "$tmpdir/$tar" -C "$dest"
+
+    if [[ "$KEEP_TARBALL" == "yes" ]]; then
+        mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
+        echo -e "  保留压缩包：${OUTPUT_DIR}/$tar"
+    fi
+
+    echo -e "\n${GREEN}===== 完成 =====${NC}"
+    echo -e "源码路径：${dest}"
 }
 
 main
