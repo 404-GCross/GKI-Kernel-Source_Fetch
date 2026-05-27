@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ============================================================
-# 脚本: fetch_kernel_source.sh
-# 功能: 从固定 Release 拉取 GKI 内核源码分卷，自动校验、合并、解压
+# 脚本: fetch_kernel_source_no-extract.sh
+# 功能: 从固定 Release 拉取 GKI 内核源码分卷，自动校验、合并
+#       默认不解压，仅生成 .tar.gz 压缩包
 # 支持镜像加速（可选），单源测速 ≤ 30 秒
 # 依赖: curl, awk (gawk), sha256sum, tar
 # ============================================================
@@ -14,10 +15,11 @@ TAG="all-kernel-sources-20260525-26381673427"
 
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PWD}/kernel-sources}"
-KEEP_TARBALL="${KEEP_TARBALL:-no}"
-FLAT_OUTPUT="${FLAT_OUTPUT:-no}"
+KEEP_TARBALL="${KEEP_TARBALL:-yes}"          # 不解压时默认保留 tar.gz
+FLAT_OUTPUT="${FLAT_OUTPUT:-no}"             # 解压时是否扁平输出
+EXTRACT="${EXTRACT:-no}"                     # 是否解压，默认 no
 
-# 测速专用文件（使用 raw 链接）
+# 测速专用文件
 SPEEDTEST_URL="https://raw.githubusercontent.com/404-GCross/GKI-Kernel-Source_Fetch/main/speedtest.mp4"
 
 MIRRORS=(
@@ -65,7 +67,7 @@ check_deps() {
     fi
 }
 
-# 确保临时目录使用磁盘空间而非 tmpfs
+# 确保临时目录使用磁盘空间而非 tmpfs（WSL 兼容）
 mkdir -p "${TMPDIR:-$PWD/.tmp}"
 
 select_option() {
@@ -271,26 +273,36 @@ main() {
     echo -e "  ${GREEN}校验通过${NC}"
 
     local tar="kernel-source-${vid}.tar.gz"
-    echo -e "${GREEN}[4/5] 合并分卷...${NC}"
+    echo -e "${GREEN}[4/5] 合并分卷 -> ${tar}${NC}"
     cat "${parts[@]/#/$tmpdir/}" > "$tmpdir/$tar"
 
-    local dest
-    if [[ "$FLAT_OUTPUT" == "yes" ]]; then
-        dest="$OUTPUT_DIR"
+    # 决定解压还是仅保留压缩包
+    if [[ "$EXTRACT" == "yes" ]]; then
+        local dest
+        if [[ "$FLAT_OUTPUT" == "yes" ]]; then
+            dest="$OUTPUT_DIR"
+        else
+            dest="${OUTPUT_DIR}/kernel-source-${vid}"
+        fi
+        mkdir -p "$dest"
+        echo -e "${GREEN}[5/5] 解压到 ${dest}${NC}"
+        tar xzf "$tmpdir/$tar" -C "$dest"
+        if [[ "$KEEP_TARBALL" == "yes" ]]; then
+            mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
+            echo -e "  保留压缩包：${OUTPUT_DIR}/$tar"
+        fi
+        echo -e "\n${GREEN}===== 完成 =====${NC}"
+        echo -e "源码路径：${dest}"
     else
-        dest="${OUTPUT_DIR}/kernel-source-${vid}"
+        # 默认不解压，保留压缩包
+        mkdir -p "$OUTPUT_DIR"
+        mv "$tmpdir/$tar" "$OUTPUT_DIR/"
+        echo -e "${GREEN}[5/5] 保留压缩包至 ${OUTPUT_DIR}/${tar}${NC}"
+        echo -e "\n${GREEN}===== 完成 =====${NC}"
+        echo -e "压缩包路径：${OUTPUT_DIR}/${tar}"
+        echo -e "如需解压，请设置环境变量 EXTRACT=yes 重新运行，或手动执行："
+        echo -e "  tar xzf ${OUTPUT_DIR}/${tar} -C 目标目录"
     fi
-    mkdir -p "$dest"
-    echo -e "${GREEN}[5/5] 解压到 ${dest}${NC}"
-    tar xzf "$tmpdir/$tar" -C "$dest"
-
-    if [[ "$KEEP_TARBALL" == "yes" ]]; then
-        mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
-        echo -e "  保留压缩包：${OUTPUT_DIR}/$tar"
-    fi
-
-    echo -e "\n${GREEN}===== 完成 =====${NC}"
-    echo -e "源码路径：${dest}"
 }
 
 main
