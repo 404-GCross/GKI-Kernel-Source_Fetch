@@ -5,6 +5,8 @@ permissions:
   actions: write
 
 on:
+  schedule:
+    - cron: '0 0 */7 * *'        # 每7天 UTC 0:00 自动运行
   workflow_dispatch:
 
 jobs:
