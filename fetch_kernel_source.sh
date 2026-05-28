@@ -111,8 +111,9 @@ download() {
     local url="${MIRROR}${BASE_RAW}/${path}"
     local dir=$(dirname "$dest")
     local fname=$(basename "$dest")
-    aria2c -x 4 -s 4 --max-connection-per-server=4 \
-        --retry-wait 5 --max-tries 3 \
+    aria2c -x 2 -s 2 --max-connection-per-server=2 \
+        --continue=true --file-allocation=none \
+        --retry-wait 5 --max-tries 5 \
         --show-console-readout=true --summary-interval=5 \
         -d "$dir" -o "$fname" "$url"
 }
