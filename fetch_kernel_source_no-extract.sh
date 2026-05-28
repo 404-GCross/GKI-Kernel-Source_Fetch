@@ -74,7 +74,7 @@ select_option() {
     local prompt="$1"; shift
     local opts=("$@")
     echo -e "${YELLOW}$prompt${NC}" >&2
-    select opt in "${opts[@]}"; do
+    COLUMNS=1 select opt in "${opts[@]}"; do
         if [[ -n "$opt" ]]; then echo "$opt"; return 0; fi
         echo -e "${RED}无效选项${NC}" >&2
     done
