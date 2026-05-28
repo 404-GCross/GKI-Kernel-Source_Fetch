@@ -20,7 +20,7 @@ FLAT_OUTPUT="${FLAT_OUTPUT:-no}"             # 解压时是否扁平输出
 EXTRACT="${EXTRACT:-no}"                     # 是否解压，默认 no
 
 # 测速专用文件
-SPEEDTEST_URL="https://raw.githubusercontent.com/404-GCross/GKI-Kernel-Source_Fetch/main/speedtest.mp4"
+SPEEDTEST_URL="https://github.com/404-GCross/GKI-Kernel-Source_Fetch/releases/download/all-kernel-sources-1/speedtest.mp4"
 
 MIRRORS=(
     "https://gh-proxy.com/"
