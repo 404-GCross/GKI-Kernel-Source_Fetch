@@ -106,10 +106,12 @@ download() {
     local path="$1"
     local dest="$2"
     local url="${MIRROR}${BASE_RAW}/${path}"
+    local dir=$(dirname "$dest")
+    local fname=$(basename "$dest")
     aria2c -x 4 -s 4 --max-connection-per-server=4 \
         --retry-wait 5 --max-tries 3 \
         --show-console-readout=true --summary-interval=5 \
-        -o "$dest" "$url"
+        -d "$dir" -o "$fname" "$url"
 }
 
 main() {
@@ -258,7 +260,7 @@ main() {
         mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
         echo -e "  保留压缩包：${OUTPUT_DIR}/$tar"
     fi
-
+两个脚本都改了吗
     echo -e "\n${GREEN}===== 完成 =====${NC}"
     echo -e "源码路径：${dest}"
 }

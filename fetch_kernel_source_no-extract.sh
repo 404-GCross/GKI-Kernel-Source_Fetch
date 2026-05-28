@@ -107,10 +107,12 @@ download() {
     local path="$1"
     local dest="$2"
     local url="${MIRROR}${BASE_RAW}/${path}"
+    local dir=$(dirname "$dest")
+    local fname=$(basename "$dest")
     aria2c -x 4 -s 4 --max-connection-per-server=4 \
         --retry-wait 5 --max-tries 3 \
         --show-console-readout=true --summary-interval=5 \
-        -o "$dest" "$url"
+        -d "$dir" -o "$fname" "$url"
 }
 
 # 从 Release 资产列表中获取某个大版本的实际 LTS 子版本号
