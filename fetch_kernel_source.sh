@@ -18,7 +18,7 @@ KEEP_TARBALL="${KEEP_TARBALL:-no}"
 FLAT_OUTPUT="${FLAT_OUTPUT:-no}"
 
 # 测速专用文件（使用 raw 链接）
-SPEEDTEST_URL="https://raw.githubusercontent.com/404-GCross/GKI-Kernel-Source_Fetch/main/speedtest.mp4"
+SPEEDTEST_URL="https://github.com/404-GCross/GKI-Kernel-Source_Fetch/releases/download/all-kernel-sources-1/speedtest.mp4"
 
 MIRRORS=(
     "https://gh-proxy.com/"
