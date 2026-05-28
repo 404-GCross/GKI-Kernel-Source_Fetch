@@ -48,7 +48,7 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 # 增强依赖检查：确保 curl、awk 等存在
 check_deps() {
     local missing=()
-    if ! command -v curl &>/dev/null; then missing+=("curl"); fi
+    if ! command -v aria2c &>/dev/null; then missing+=("aria2"); fi
     if ! command -v awk &>/dev/null; then missing+=("gawk"); fi
     if [ ${#missing[@]} -gt 0 ]; then
         echo -e "${YELLOW}缺少依赖: ${missing[*]}，正在尝试安装...${NC}"
@@ -107,7 +107,10 @@ download() {
     local path="$1"
     local dest="$2"
     local url="${MIRROR}${BASE_RAW}/${path}"
-    curl -fSL --retry 3 --retry-delay 5 -# -o "$dest" "$url"
+    aria2c -x 4 -s 4 --max-connection-per-server=4 \
+        --retry-wait 5 --max-tries 3 \
+        --show-console-readout=true --summary-interval=5 \
+        -o "$dest" "$url"
 }
 
 # 从 Release 资产列表中获取某个大版本的实际 LTS 子版本号
