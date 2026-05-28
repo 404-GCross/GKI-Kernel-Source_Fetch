@@ -26,13 +26,6 @@ MIRRORS=(
     "https://gh-proxy.com/"
     "https://gh.llkk.cc/"
     "https://gh.ddlc.top/"
-    "https://hub.gitmirror.com/"
-    "https://ghproxy.homeboyc.cn/"
-    "https://ghproxy.com/"
-    "https://gh.api.99988866.xyz/"
-    "https://gh.con.sh/"
-    "https://mirror.ghproxy.com/"
-    "https://ghproxy.cc/"
 )
 
 declare -A VERSIONS=(
@@ -74,7 +67,6 @@ select_option() {
     local prompt="$1"; shift
     local opts=("$@")
     echo -e "${YELLOW}$prompt${NC}" >&2
-    COLUMNS=1
     select opt in "${opts[@]}"; do
         if [[ -n "$opt" ]]; then echo "$opt"; return 0; fi
         echo -e "${RED}无效选项${NC}" >&2
@@ -142,7 +134,7 @@ main() {
     check_deps
 
     IFS=$'\n' majors=($(for k in "${!VERSIONS[@]}"; do echo "$k"; done | sort))
-    local major=$(select_option "选择内核大版本：" "${majors[@]}")
+    COLUMNS=1 local major=$(select_option "选择内核大版本：" "${majors[@]}")
 
     IFS=' ' read -ra subs <<< "${VERSIONS[$major]}"
     local sub=$(select_option "选择小版本：" "${subs[@]}")
