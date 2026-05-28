@@ -3,7 +3,7 @@
 # 脚本: fetch_kernel_source.sh
 # 功能: 从固定 Release 拉取 GKI 内核源码分卷，自动校验、合并、解压
 # 支持镜像加速（可选），单源测速 ≤ 30 秒
-# 依赖: aria2, curl, awk (gawk), sha256sum, tar
+# 依赖: curl, awk (gawk), sha256sum, tar
 # ============================================================
 set -euo pipefail
 
@@ -39,7 +39,6 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 # 增强依赖检查：确保 curl、awk 等存在
 check_deps() {
     local missing=()
-    if ! command -v aria2c &>/dev/null; then missing+=("aria2"); fi
     if ! command -v curl &>/dev/null; then missing+=("curl"); fi
     if ! command -v awk &>/dev/null; then missing+=("gawk"); fi
     if [ ${#missing[@]} -gt 0 ]; then
@@ -109,13 +108,7 @@ download() {
     local path="$1"
     local dest="$2"
     local url="${MIRROR}${BASE_RAW}/${path}"
-    local dir=$(dirname "$dest")
-    local fname=$(basename "$dest")
-    aria2c -x 2 -s 2 --max-connection-per-server=2 \
-        --continue=true --file-allocation=none \
-        --retry-wait 5 --max-tries 5 \
-        --show-console-readout=true --summary-interval=5 \
-        -d "$dir" -o "$fname" "$url"
+    curl -fSL --retry 3 --retry-delay 5 -# -o "$dest" "$url"
 }
 
 main() {
