@@ -167,8 +167,18 @@ main() {
     echo -e "${GREEN}目标版本：${vid}${NC}"
 
     local all_sources=("直连（不使用镜像）" "${MIRRORS[@]}" "自定义镜像（手动输入URL）")
-    echo -e "${YELLOW}请选择下载源：${NC}"
-    local selected=$(select_option "" "${all_sources[@]}")
+    echo -e "${YELLOW}请选择下载源：${NC}" >&2
+    local s_idx=1
+    for s in "${all_sources[@]}"; do echo "  $s_idx) $s" >&2; ((s_idx++)); done
+    local selected
+    while true; do
+        read -p "#? " choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#all_sources[@]} )); then
+            selected="${all_sources[$((choice-1))]}"
+            break
+        fi
+        echo -e "${RED}无效选项${NC}" >&2
+    done
     if [[ "$selected" == "自定义镜像（手动输入URL）" ]]; then
         read -p "请输入镜像URL（示例：https://gh.llkk.cc/，留空则直连）： " custom_url
         if [[ -z "$custom_url" ]]; then MIRROR=""; else
