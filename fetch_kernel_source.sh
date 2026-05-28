@@ -203,7 +203,7 @@ main() {
         mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
         echo -e "  保留压缩包：${OUTPUT_DIR}/$tar"
     fi
-两个脚本都改了吗
+
     echo -e "\n${GREEN}===== 完成 =====${NC}"
     echo -e "源码路径：${dest}"
 }
