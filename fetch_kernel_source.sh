@@ -111,9 +111,18 @@ main() {
     check_deps
 
     IFS=$'\n' majors=($(for k in "${!VERSIONS[@]}"; do echo "$k"; done | sort))
-    export COLUMNS=1
-    local major=$(select_option "选择内核大版本：" "${majors[@]}")
-    unset COLUMNS
+    echo -e "${YELLOW}选择内核大版本：${NC}" >&2
+    local m_idx=1
+    for m in "${majors[@]}"; do echo "  $m_idx) $m" >&2; ((m_idx++)); done
+    local major
+    while true; do
+        read -p "#? " choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#majors[@]} )); then
+            major="${majors[$((choice-1))]}"
+            break
+        fi
+        echo -e "${RED}无效选项${NC}" >&2
+    done
 
     IFS=' ' read -ra subs <<< "${VERSIONS[$major]}"
     local sub=$(select_option "选择小版本：" "${subs[@]}")
