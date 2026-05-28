@@ -111,7 +111,9 @@ main() {
     check_deps
 
     IFS=$'\n' majors=($(for k in "${!VERSIONS[@]}"; do echo "$k"; done | sort))
-    COLUMNS=1 local major=$(select_option "选择内核大版本：" "${majors[@]}")
+    export COLUMNS=1
+    local major=$(select_option "选择内核大版本：" "${majors[@]}")
+    unset COLUMNS
 
     IFS=' ' read -ra subs <<< "${VERSIONS[$major]}"
     local sub=$(select_option "选择小版本：" "${subs[@]}")
