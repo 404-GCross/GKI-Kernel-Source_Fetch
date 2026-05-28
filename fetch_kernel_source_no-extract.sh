@@ -155,93 +155,32 @@ main() {
     local sha="kernel-source-${vid}.tar.gz.sha256"
     echo -e "${GREEN}目标版本：${vid}${NC}"
 
-    echo -e "${YELLOW}是否对镜像源进行测速（单源最长 30 秒，约 23 MB 测试文件）？(y/n) [n]:${NC}"
-    read -r do_speedtest
-    local speed_results=()
-
-    if [[ "$do_speedtest" == "y" || "$do_speedtest" == "Y" ]]; then
-        echo -e "${GREEN}正在测速（下载 speedtest.mp4），请耐心等待...${NC}"
-
-        echo -n "  直连 ... "
-        local direct_out
-        direct_out=$(speed_test "")
-        if [[ "$direct_out" == "FAIL" ]]; then
-            echo -e "${RED}失败（超时或无法连接）${NC}"
-        else
-            local direct_speed=$(echo "$direct_out" | awk '{print $1}')
-            local direct_time=$(echo "$direct_out" | awk '{print $2}')
-            echo -e "${GREEN}${direct_speed} KB/s (${direct_time}s)${NC}"
-            speed_results+=("$direct_speed $direct_time 直连（不使用镜像）")
+    local all_sources=("直连（不使用镜像）" "${MIRRORS[@]}" "自定义镜像（手动输入URL）")
+    echo -e "${YELLOW}请选择下载源：${NC}"
+    local selected=$(select_option "" "${all_sources[@]}")
+    if [[ "$selected" == "自定义镜像（手动输入URL）" ]]; then
+        read -p "请输入镜像URL（示例：https://gh.llkk.cc/，留空则直连）： " custom_url
+        if [[ -z "$custom_url" ]]; then MIRROR=""; else
+            [[ "$custom_url" != */ ]] && custom_url="${custom_url}/"
+            MIRROR="$custom_url"
         fi
-
-        for mirror in "${MIRRORS[@]}"; do
-            echo -n "  $mirror ... "
-            local out
-            out=$(speed_test "$mirror")
-            if [[ "$out" == "FAIL" ]]; then
-                echo -e "${RED}失败（超时或无法连接）${NC}"
-            else
-                local m_speed=$(echo "$out" | awk '{print $1}')
-                local m_time=$(echo "$out" | awk '{print $2}')
-                echo -e "${GREEN}${m_speed} KB/s (${m_time}s)${NC}"
-                speed_results+=("$m_speed $m_time $mirror")
-            fi
-        done
-
-        if [[ ${#speed_results[@]} -gt 0 ]]; then
-            IFS=$'\n' sorted=($(sort -t' ' -k1 -rn <<< "${speed_results[*]}"))
-            unset IFS
-
-            echo -e "\n${GREEN}测速排名（速度越快越靠前）：${NC}"
-            local idx=1
-            local speed_opts=()
-            for line in "${sorted[@]}"; do
-                local sp=$(echo "$line" | awk '{print $1}')
-                local tm=$(echo "$line" | awk '{print $2}')
-                local nm=$(echo "$line" | cut -d' ' -f3-)
-                speed_opts+=("${sp} KB/s (${tm}s) - ${nm}")
-                printf "  %d) %s KB/s (%s s) - %s\n" "$idx" "$sp" "$tm" "$nm"
-                idx=$((idx + 1))
-            done
-            speed_opts+=("自定义镜像（手动输入URL）")
-            echo "  $idx) 自定义镜像（手动输入URL）"
-
-            echo -e "${YELLOW}请根据测速结果选择下载源（输入序号）：${NC}"
-            local selected=$(select_option "" "${speed_opts[@]}")
-
-            if [[ "$selected" == "自定义镜像（手动输入URL）" ]]; then
-                read -p "请输入镜像URL（示例：https://gh.llkk.cc/，留空则直连）： " custom_url
-                if [[ -z "$custom_url" ]]; then MIRROR=""; else
-                    [[ "$custom_url" != */ ]] && custom_url="${custom_url}/"
-                    MIRROR="$custom_url"
-                fi
-            else
-                local chosen_name=$(echo "$selected" | sed -E 's/^[0-9.]* KB\/s \([0-9.]*s\) - //')
-                if [[ "$chosen_name" == "直连（不使用镜像）" ]]; then
-                    MIRROR=""
-                else
-                    MIRROR="$chosen_name"
-                fi
-            fi
-        else
-            echo -e "${RED}所有源测速均失败（30秒内无法完成下载），将手动选择下载源。${NC}"
-        fi
+    elif [[ "$selected" == "直连（不使用镜像）" ]]; then
+        MIRROR=""
+    else
+        MIRROR="$selected"
     fi
 
-    if [[ -z "${MIRROR+x}" ]]; then
-        local all_sources=("直连（不使用镜像）" "${MIRRORS[@]}" "自定义镜像（手动输入URL）")
-        echo -e "${YELLOW}请选择下载源：${NC}"
-        local selected=$(select_option "" "${all_sources[@]}")
-        if [[ "$selected" == "自定义镜像（手动输入URL）" ]]; then
-            read -p "请输入镜像URL（示例：https://gh.llkk.cc/，留空则直连）： " custom_url
-            if [[ -z "$custom_url" ]]; then MIRROR=""; else
-                [[ "$custom_url" != */ ]] && custom_url="${custom_url}/"
-                MIRROR="$custom_url"
-            fi
-        elif [[ "$selected" == "直连（不使用镜像）" ]]; then
-            MIRROR=""
+    echo -e "${YELLOW}是否对所选源进行测速（最长 30 秒，约 23 MB）？(y/n) [n]:${NC}"
+    read -r do_speedtest
+    if [[ "$do_speedtest" == "y" || "$do_speedtest" == "Y" ]]; then
+        echo -n "  测速 ${MIRROR:-直连} ... "
+        local out=$(speed_test "$MIRROR")
+        if [[ "$out" == "FAIL" ]]; then
+            echo -e "${RED}失败（超时或无法连接）${NC}"
         else
-            MIRROR="$selected"
+            local sp=$(echo "$out" | awk '{print $1}')
+            local tm=$(echo "$out" | awk '{print $2}')
+            echo -e "${GREEN}${sp} KB/s (${tm}s)${NC}"
         fi
     fi
 
