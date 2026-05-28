@@ -166,33 +166,41 @@ main() {
     echo -e "${GREEN}目标版本：${vid}${NC}"
 
     local all_sources=("直连（不使用镜像）" "${MIRRORS[@]}" "自定义镜像（手动输入URL）")
-    echo -e "${YELLOW}请选择下载源：${NC}"
-    local selected=$(select_option "" "${all_sources[@]}")
-    if [[ "$selected" == "自定义镜像（手动输入URL）" ]]; then
-        read -p "请输入镜像URL（示例：https://gh.llkk.cc/，留空则直连）： " custom_url
-        if [[ -z "$custom_url" ]]; then MIRROR=""; else
-            [[ "$custom_url" != */ ]] && custom_url="${custom_url}/"
-            MIRROR="$custom_url"
-        fi
-    elif [[ "$selected" == "直连（不使用镜像）" ]]; then
-        MIRROR=""
-    else
-        MIRROR="$selected"
-    fi
-
-    echo -e "${YELLOW}是否对所选源进行测速（最长 30 秒，约 23 MB）？(y/n) [n]:${NC}"
-    read -r do_speedtest
-    if [[ "$do_speedtest" == "y" || "$do_speedtest" == "Y" ]]; then
-        echo -n "  测速 ${MIRROR:-直连} ... "
-        local out=$(speed_test "$MIRROR")
-        if [[ "$out" == "FAIL" ]]; then
-            echo -e "${RED}失败（超时或无法连接）${NC}"
+    while true; do
+        echo -e "${YELLOW}请选择下载源：${NC}"
+        local selected=$(select_option "" "${all_sources[@]}")
+        if [[ "$selected" == "自定义镜像（手动输入URL）" ]]; then
+            read -p "请输入镜像URL（示例：https://gh.llkk.cc/，留空则直连）： " custom_url
+            if [[ -z "$custom_url" ]]; then MIRROR=""; else
+                [[ "$custom_url" != */ ]] && custom_url="${custom_url}/"
+                MIRROR="$custom_url"
+            fi
+        elif [[ "$selected" == "直连（不使用镜像）" ]]; then
+            MIRROR=""
         else
-            local sp=$(echo "$out" | awk '{print $1}')
-            local tm=$(echo "$out" | awk '{print $2}')
-            echo -e "${GREEN}${sp} KB/s (${tm}s)${NC}"
+            MIRROR="$selected"
         fi
-    fi
+
+        echo -e "${YELLOW}是否对所选源进行测速（最长 30 秒，约 23 MB）？(y/n) [n]:${NC}"
+        read -r do_speedtest
+        if [[ "$do_speedtest" == "y" || "$do_speedtest" == "Y" ]]; then
+            echo -n "  测速 ${MIRROR:-直连} ... "
+            local out=$(speed_test "$MIRROR")
+            if [[ "$out" == "FAIL" ]]; then
+                echo -e "${RED}失败（超时或无法连接）${NC}"
+            else
+                local sp=$(echo "$out" | awk '{print $1}')
+                local tm=$(echo "$out" | awk '{print $2}')
+                echo -e "${GREEN}${sp} KB/s (${tm}s)${NC}"
+            fi
+        fi
+
+        echo -e "${YELLOW}是否使用此源继续？(y/n) [y]:${NC}"
+        read -r use_source
+        if [[ "$use_source" != "n" && "$use_source" != "N" ]]; then
+            break
+        fi
+    done
 
     echo -e "${GREEN}使用源：${MIRROR:-直连}${NC}"
 
