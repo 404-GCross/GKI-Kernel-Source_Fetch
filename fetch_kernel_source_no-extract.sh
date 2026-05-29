@@ -10,7 +10,7 @@ set -euo pipefail
 
 # -------------------- 固定仓库与标签 --------------------
 REPO="404-GCross/Kernel-Source_Pull"
-TAG="all-kernel-sources-20260527-26484777478"
+TAG="all-kernel-sources-20260529-26613698897"
 # --------------------------------------------------------
 
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
