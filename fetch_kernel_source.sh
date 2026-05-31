@@ -140,6 +140,7 @@ main() {
             MIRROR="$selected"
         fi
 
+        local speed_fail=0
         echo -e "${YELLOW}是否对所选源进行测速（最长 30 秒，约 23 MB）？(y/n) [n]:${NC}"
         read -r do_speedtest
         if [[ "$do_speedtest" == "y" || "$do_speedtest" == "Y" ]]; then
@@ -147,6 +148,7 @@ main() {
             local out=$(speed_test "$MIRROR")
             if [[ "$out" == "FAIL" ]]; then
                 echo -e "${RED}失败（超时或无法连接）${NC}"
+                speed_fail=1
             else
                 local sp=$(echo "$out" | awk '{print $1}')
                 local tm=$(echo "$out" | awk '{print $2}')
@@ -154,10 +156,14 @@ main() {
             fi
         fi
 
-        echo -e "${YELLOW}是否使用此源继续？(y/n) [y]:${NC}"
-        read -r use_source
-        if [[ "$use_source" != "n" && "$use_source" != "N" ]]; then
-            break
+        if [[ "$speed_fail" -eq 1 ]]; then
+            echo -e "${RED}测速失败，请重新选择下载源${NC}"
+        else
+            echo -e "${YELLOW}是否使用此源继续？(y/n) [y]:${NC}"
+            read -r use_source
+            if [[ "$use_source" != "n" && "$use_source" != "N" ]]; then
+                break
+            fi
         fi
     done
 
