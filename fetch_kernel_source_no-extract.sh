@@ -10,7 +10,7 @@ set -euo pipefail
 
 # -------------------- 固定仓库与标签 --------------------
 REPO="404-GCross/Kernel-Source_Pull"
-TAG="all-kernel-sources-20260527-26484777478"
+TAG="all-kernel-sources-20260529-26613698897"
 # --------------------------------------------------------
 
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
@@ -20,7 +20,7 @@ FLAT_OUTPUT="${FLAT_OUTPUT:-no}"             # 解压时是否扁平输出
 EXTRACT="${EXTRACT:-no}"                     # 是否解压，默认 no
 
 # 测速专用文件
-SPEEDTEST_URL="https://raw.githubusercontent.com/404-GCross/GKI-Kernel-Source_Fetch/main/speedtest.mp4"
+SPEEDTEST_URL="https://github.com/404-GCross/GKI-Kernel-Source_Fetch/releases/download/all-kernel-sources-1/speedtest.mp4"
 
 MIRRORS=(
     "https://gh-proxy.com/"
