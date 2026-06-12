@@ -112,23 +112,23 @@ jobs:
           echo "REAL_CONFIG=$REAL_CONFIG" >> $GITHUB_ENV
           echo "实际子版本号: $ACTUAL_SUBLEVEL → 配置标识: $REAL_CONFIG"
 
-      - name: 分卷压缩内核源码
-        run: |
-          ARCHIVE_BASE="kernel-source-${{ env.REAL_CONFIG }}.tar.gz"
-          echo "压缩 $KERNEL_ROOT 到分卷，排除 .repo 和 .git 目录"
-          tar czf - -C "$KERNEL_ROOT" --exclude='.repo' --exclude-vcs . | split -b 2000M - "$GITHUB_WORKSPACE/$ARCHIVE_BASE.part"
-          echo "分卷列表："
-          ls -lh "$GITHUB_WORKSPACE/$ARCHIVE_BASE.part"*
-          cd "$GITHUB_WORKSPACE"
-          sha256sum $ARCHIVE_BASE.part* > "$ARCHIVE_BASE.sha256"
-          echo "ARCHIVE_BASE=$ARCHIVE_BASE" >> $GITHUB_ENV
-
-      - name: 上传分卷到统一 Release
-        if: inputs.release_tag != ''
+      - name: 推送源码到代码仓库
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: "404-GCross/GKI-Kernel-Source_Fetch"
+          TARGET_BRANCH: "${{ env.REAL_CONFIG }}"
+          GIT_TOKEN: ${{ secrets.SCRIPT_REPO_PAT }}
         run: |
-          gh release upload "${{ inputs.release_tag }}" \
-            ${{ env.ARCHIVE_BASE }}.part* \
-            ${{ env.ARCHIVE_BASE }}.sha256 \
-            --clobber
+          cd "$KERNEL_ROOT"
+          echo "清理 .repo 和 .git 目录..."
+          rm -rf .repo
+          find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+          echo "初始化 Git 仓库..."
+          git init
+          git checkout -b "$TARGET_BRANCH"
+          git add .
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Kernel source ${{ env.REAL_CONFIG }} (patch ${{ inputs.os_patch_level }})"
+          echo "推送到 $TARGET_REPO 分支 $TARGET_BRANCH ..."
+          git push --force "https://x-access-token:${GIT_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_BRANCH"
+          echo "推送完成。"
