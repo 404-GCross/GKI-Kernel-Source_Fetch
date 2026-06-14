@@ -1,0 +1,34 @@
+// Signature format: 2.0
+package approved.build {
+
+  public class Branch {
+    ctor public Branch();
+    method public java.util.List<approved.build.Build> getBuild();
+    method public String getName();
+    method public void setName(String);
+  }
+
+  public class Build {
+    ctor public Build();
+    method public java.math.BigInteger getBug();
+    method public String getId();
+    method public void setBug(java.math.BigInteger);
+    method public void setId(String);
+  }
+
+  public class OgkiApproved {
+    ctor public OgkiApproved();
+    method public java.util.List<approved.build.Branch> getBranch();
+    method public int getVersion();
+    method public void setVersion(int);
+  }
+
+  public class XmlParser {
+    ctor public XmlParser();
+    method public static approved.build.OgkiApproved read(java.io.InputStream) throws javax.xml.datatype.DatatypeConfigurationException, java.io.IOException, org.xmlpull.v1.XmlPullParserException;
+    method public static String readText(org.xmlpull.v1.XmlPullParser) throws java.io.IOException, org.xmlpull.v1.XmlPullParserException;
+    method public static void skip(org.xmlpull.v1.XmlPullParser) throws java.io.IOException, org.xmlpull.v1.XmlPullParserException;
+  }
+
+}
+

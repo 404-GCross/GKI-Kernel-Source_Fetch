@@ -1,0 +1,58 @@
+// Signature format: 2.0
+package kernel.lifetimes {
+
+  public class Branch {
+    ctor public Branch();
+    method public javax.xml.datatype.XMLGregorianCalendar getEol();
+    method public javax.xml.datatype.XMLGregorianCalendar getLaunch();
+    method public kernel.lifetimes.LtsVersions getLtsVersions_optional();
+    method public int getMin_android_release();
+    method public String getName();
+    method public kernel.lifetimes.NoReleases getNoReleases_optional();
+    method public String getVersion();
+    method public void setEol(javax.xml.datatype.XMLGregorianCalendar);
+    method public void setLaunch(javax.xml.datatype.XMLGregorianCalendar);
+    method public void setLtsVersions_optional(kernel.lifetimes.LtsVersions);
+    method public void setMin_android_release(int);
+    method public void setName(String);
+    method public void setNoReleases_optional(kernel.lifetimes.NoReleases);
+    method public void setVersion(String);
+  }
+
+  public class Kernels {
+    ctor public Kernels();
+    method public java.util.List<kernel.lifetimes.Branch> getBranch();
+    method public int getSchema_version();
+    method public void setSchema_version(int);
+  }
+
+  public class LtsVersions {
+    ctor public LtsVersions();
+    method public java.util.List<kernel.lifetimes.Release> getRelease();
+  }
+
+  public class NoReleases {
+    ctor public NoReleases();
+    method public String getReason();
+    method public void setReason(String);
+  }
+
+  public class Release {
+    ctor public Release();
+    method public javax.xml.datatype.XMLGregorianCalendar getEol();
+    method public javax.xml.datatype.XMLGregorianCalendar getLaunch();
+    method public String getVersion();
+    method public void setEol(javax.xml.datatype.XMLGregorianCalendar);
+    method public void setLaunch(javax.xml.datatype.XMLGregorianCalendar);
+    method public void setVersion(String);
+  }
+
+  public class XmlParser {
+    ctor public XmlParser();
+    method public static kernel.lifetimes.Kernels read(java.io.InputStream) throws javax.xml.datatype.DatatypeConfigurationException, java.io.IOException, org.xmlpull.v1.XmlPullParserException;
+    method public static String readText(org.xmlpull.v1.XmlPullParser) throws java.io.IOException, org.xmlpull.v1.XmlPullParserException;
+    method public static void skip(org.xmlpull.v1.XmlPullParser) throws java.io.IOException, org.xmlpull.v1.XmlPullParserException;
+  }
+
+}
+

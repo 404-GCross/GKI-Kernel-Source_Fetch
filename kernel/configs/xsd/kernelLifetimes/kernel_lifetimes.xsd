@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2024 The Android Open Source Project
+
+         Licensed under the Apache License, Version 2.0 (the "License");
+         you may not use this file except in compliance with the License.
+         You may obtain a copy of the License at
+
+                    http://www.apache.org/licenses/LICENSE-2.0
+
+         Unless required by applicable law or agreed to in writing, software
+         distributed under the License is distributed on an "AS IS" BASIS,
+         WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+         See the License for the specific language governing permissions and
+         limitations under the License.
+-->
+
+<xs:schema version="2.0"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="kernels">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="branch" type="branch" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+            <xs:attribute name="schema_version" type="xs:int" use="required"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:complexType name="branch">
+        <xs:choice>
+            <xs:element name="no-releases" type="no-releases"/>
+            <xs:element name="lts-versions" type="lts-versions"/>
+        </xs:choice>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="min_android_release" type="xs:int"/>
+        <xs:attribute name="version" type="xs:string" use="required"/>
+        <xs:attribute name="launch" type="xs:date" use="required"/>
+        <xs:attribute name="eol" type="xs:date" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="no-releases">
+        <xs:attribute name="reason" type="xs:string" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="lts-versions">
+        <xs:sequence>
+            <xs:element name="release" type="release" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="release">
+        <xs:attribute name="version" type="xs:string" use="required"/>
+        <xs:attribute name="launch" type="xs:date" use="required"/>
+        <xs:attribute name="eol" type="xs:date" use="required"/>
+    </xs:complexType>
+</xs:schema>
