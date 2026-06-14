@@ -1,0 +1,192 @@
+name: 内核源码拉取
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_call:
+    inputs:
+      android_version:
+        required: true
+        type: string
+      kernel_version:
+        required: true
+        type: string
+      sub_level:
+        required: true
+        type: string
+      os_patch_level:
+        required: true
+        type: string
+      release_tag:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  publish-source:
+    name: "源码 ${{ inputs.kernel_version }}.${{ inputs.sub_level }}-${{ inputs.os_patch_level }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 打印配置摘要
+        run: |
+          echo "========================================"
+          echo "       内核源码拉取配置"
+          echo "========================================"
+          echo "Android 版本  : ${{ inputs.android_version }}"
+          echo "内核版本      : ${{ inputs.kernel_version }}"
+          echo "子版本号      : ${{ inputs.sub_level }}"
+          echo "补丁级别      : ${{ inputs.os_patch_level }}"
+          echo "========================================"
+
+      - name: 清理磁盘空间
+        uses: endersonmenezes/free-disk-space@v3
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
+          rm_cmd: "rmz"
+          rmz_version: "3.1.1"
+          testing: false
+
+      - name: 检出代码仓库
+        uses: actions/checkout@v4
+
+      - name: 初始化目录与环境变量
+        run: |
+          CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.sub_level }}"
+          KERNEL_ROOT="$GITHUB_WORKSPACE/$CONFIG"
+          mkdir -p "$KERNEL_ROOT"
+
+          cat >> $GITHUB_ENV << EOF
+          CONFIG=$CONFIG
+          KERNEL_ROOT=$KERNEL_ROOT
+          EOF
+
+          mkdir -p "$GITHUB_WORKSPACE/git-repo"
+          curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "$GITHUB_WORKSPACE/git-repo/repo"
+          chmod 0755 "$GITHUB_WORKSPACE/git-repo/repo"
+          echo "$GITHUB_WORKSPACE/git-repo" >> "$GITHUB_PATH"
+          echo "REPO=$GITHUB_WORKSPACE/git-repo/repo" >> $GITHUB_ENV
+
+      - name: 配置 Git
+        run: |
+          git config --global user.name "BuildBot"
+          git config --global user.email "BuildGkiKernel@gmail.com"
+
+      - name: 同步内核源码
+        working-directory: ${{ env.KERNEL_ROOT }}
+        run: |
+          FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
+          echo "初始化 repo，分支: common-${FORMATTED_BRANCH}"
+
+          $REPO init -u https://android.googlesource.com/kernel/manifest -b common-${FORMATTED_BRANCH} --repo-rev=v2.16
+
+          REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common ${FORMATTED_BRANCH})
+          DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
+
+          if grep -q deprecated <<< "$REMOTE_BRANCH"; then
+            echo "检测到已弃用的分支，调整 manifest"
+            sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" $DEFAULT_MANIFEST_PATH
+          fi
+
+          # 带重试的 repo sync，应对 Google 服务器间歇性限制
+          REPO_SYNC_MAX_RETRIES=3
+          for i in $(seq 1 $REPO_SYNC_MAX_RETRIES); do
+            echo "repo sync 尝试 $i/$REPO_SYNC_MAX_RETRIES ..."
+            if $REPO --trace sync -c -j4 --no-tags --fail-fast; then
+              echo "repo sync 成功！"
+              break
+            fi
+            if [ $i -lt $REPO_SYNC_MAX_RETRIES ]; then
+              WAIT=$(( i * 30 + RANDOM % 15 ))
+              echo "repo sync 失败，等待 ${WAIT} 秒后重试..."
+              sleep $WAIT
+            else
+              echo "repo sync 最终失败！"
+              exit 1
+            fi
+          done
+
+      - name: 提取实际子版本号
+        run: |
+          ACTUAL_SUBLEVEL="${{ inputs.sub_level }}"
+          if [[ -f "$KERNEL_ROOT/common/Makefile" ]]; then
+            EXTRACTED=$(grep '^SUBLEVEL = ' "$KERNEL_ROOT/common/Makefile" | awk '{print $3}')
+            [[ -n "$EXTRACTED" ]] && ACTUAL_SUBLEVEL="$EXTRACTED"
+          fi
+          echo "ACTUAL_SUBLEVEL=$ACTUAL_SUBLEVEL" >> $GITHUB_ENV
+          REAL_CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${ACTUAL_SUBLEVEL}"
+          echo "REAL_CONFIG=$REAL_CONFIG" >> $GITHUB_ENV
+          echo "实际子版本号: $ACTUAL_SUBLEVEL → 配置标识: $REAL_CONFIG"
+
+      - name: 推送源码到代码仓库
+        env:
+          TARGET_REPO: "404-GCross/GKI-Kernel-Source_Fetch"
+          TARGET_BRANCH: "${{ env.REAL_CONFIG }}"
+          GIT_TOKEN: ${{ secrets.SCRIPT_REPO_PAT }}
+        run: |
+          set -euo pipefail
+          cd "$KERNEL_ROOT"
+
+          echo "清理 .repo 和 .git 目录..."
+          rm -rf .repo
+          find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
+
+          echo "初始化 Git 仓库..."
+          git init -q
+
+          git checkout -q -b "$TARGET_BRANCH"
+
+          echo "添加所有文件..."
+          git add . > /dev/null 2>&1
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          echo "提交更改..."
+          git commit -q -m "Kernel source ${{ env.REAL_CONFIG }} (patch ${{ inputs.os_patch_level }})"
+
+          # 针对大仓库的 Git 配置优化
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 300
+
+          echo "========================================="
+          echo "推送到 $TARGET_REPO 分支 $TARGET_BRANCH ..."
+          echo "========================================="
+
+          # 随机延迟 5~15 秒，避免并发过高触发滥用检测
+          DELAY=$(( RANDOM % 11 + 5 ))
+          echo "等待 ${DELAY} 秒..."
+          sleep $DELAY
+
+          # 重试推送最多 5 次，等待时间递增以应对 GitHub rate limit
+          MAX_RETRIES=5
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "推送尝试 $i/$MAX_RETRIES ..."
+            # 推送前清理本地包文件（避免残留数据）
+            rm -f .git/objects/pack/tmp_pack_*
+            if git push --force "https://x-access-token:${GIT_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_BRANCH" 2>&1; then
+              echo "推送成功！"
+              exit 0
+            fi
+            if [ $i -lt $MAX_RETRIES ]; then
+              WAIT=$(( i * 60 + RANDOM % 30 ))
+              echo "推送失败，等待 ${WAIT} 秒后重试..."
+              sleep $WAIT
+              # 重置本地仓库状态
+              git gc --prune=now --quiet 2>/dev/null || true
+            fi
+          done
+
+          echo "推送最终失败！"
+          exit 1

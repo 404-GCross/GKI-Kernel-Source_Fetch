@@ -1,0 +1,69 @@
+name: 内核源码拉取 - Android 12 (5.10)
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  publish-sources:
+    name: "5.10.${{ matrix.sub_level }}-${{ matrix.os_patch_level }}"
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - sub_level: "66"
+            os_patch_level: "2022-01"
+          - sub_level: "81"
+            os_patch_level: "2022-03"
+          - sub_level: "101"
+            os_patch_level: "2022-04"
+          - sub_level: "110"
+            os_patch_level: "2022-07"
+          - sub_level: "117"
+            os_patch_level: "2022-09"
+          - sub_level: "136"
+            os_patch_level: "2022-11"
+          - sub_level: "149"
+            os_patch_level: "2023-01"
+          - sub_level: "160"
+            os_patch_level: "2023-03"
+          - sub_level: "168"
+            os_patch_level: "2023-04"
+          - sub_level: "177"
+            os_patch_level: "2023-07"
+          - sub_level: "185"
+            os_patch_level: "2023-09"
+          - sub_level: "198"
+            os_patch_level: "2024-01"
+          - sub_level: "205"
+            os_patch_level: "2024-03"
+          - sub_level: "209"
+            os_patch_level: "2024-05"
+          - sub_level: "218"
+            os_patch_level: "2024-08"
+          - sub_level: "226"
+            os_patch_level: "2024-11"
+          - sub_level: "233"
+            os_patch_level: "2025-02"
+          - sub_level: "236"
+            os_patch_level: "2025-05"
+          - sub_level: "237"
+            os_patch_level: "2025-06"
+          - sub_level: "240"
+            os_patch_level: "2025-09"
+          - sub_level: "246"
+            os_patch_level: "2025-12"
+          - sub_level: "X"
+            os_patch_level: "lts"
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      android_version: "android12"
+      kernel_version: "5.10"
+      sub_level: ${{ matrix.sub_level }}
+      os_patch_level: ${{ matrix.os_patch_level }}

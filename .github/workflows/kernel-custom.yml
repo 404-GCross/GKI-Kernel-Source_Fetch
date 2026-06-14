@@ -1,0 +1,52 @@
+name: 内核源码拉取-自定义
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      # ==================== 内核版本配置 ====================
+      android_version:
+        description: "Android 版本"
+        required: true
+        type: choice
+        options:
+          - android12
+          - android13
+          - android14
+          - android15
+          - android16
+        default: android12
+      kernel_version:
+        description: "内核版本"
+        required: true
+        type: choice
+        options:
+          - "5.10"
+          - "5.15"
+          - "6.1"
+          - "6.6"
+          - "6.12"
+        default: "5.10"
+      sub_level:
+        description: "子版本号 (如 66, 198, X)"
+        required: true
+        type: string
+        default: "66"
+      os_patch_level:
+        description: "安全补丁级别 (如 2022-01, lts)"
+        required: true
+        type: string
+        default: "2022-01"
+
+jobs:
+  publish-source:
+    uses: ./.github/workflows/build.yml
+    secrets: inherit
+    with:
+      android_version: ${{ inputs.android_version }}
+      kernel_version: ${{ inputs.kernel_version }}
+      sub_level: ${{ inputs.sub_level }}
+      os_patch_level: ${{ inputs.os_patch_level }}
