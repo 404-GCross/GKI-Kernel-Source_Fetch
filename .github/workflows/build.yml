@@ -128,87 +128,58 @@ jobs:
           echo "REAL_CONFIG=$REAL_CONFIG" >> $GITHUB_ENV
           echo "实际子版本号: $ACTUAL_SUBLEVEL → 配置标识: $REAL_CONFIG"
 
-      - name: 推送源码到代码仓库
+      - name: 打包工具链并上传 Release
         env:
-          TARGET_REPO: "404-GCross/GKI-Kernel-Source_Fetch"
-          TARGET_BRANCH: "${{ env.REAL_CONFIG }}"
           GIT_TOKEN: ${{ secrets.SCRIPT_REPO_PAT }}
+          GH_TOKEN: ${{ secrets.SCRIPT_REPO_PAT }}
         run: |
           set -euo pipefail
           cd "$KERNEL_ROOT"
 
-          echo "清理 .repo 和 .git 目录..."
+          echo "清理 .repo 目录..."
           rm -rf .repo
           find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
 
-          echo "初始化 Git 仓库..."
-          git init -q
+          # 删除内核源码，只保留 Bazel 工具链
+          if [ -d "common" ]; then
+            COMMON_SIZE=$(du -sh common | cut -f1)
+            echo "删除 common/ 内核源码 ($COMMON_SIZE)..."
+            rm -rf common
+          fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 计算剩余工具链大小
+          TOOLCHAIN_SIZE=$(du -sh . | cut -f1)
+          echo "剩余工具链大小: $TOOLCHAIN_SIZE"
 
-          # Git 配置：HTTP/1.1 + 大缓冲区
-          git config --global http.version HTTP/1.1
-          git config --global http.postBuffer 2147483648
-          git config --global http.lowSpeedLimit 0
-          git config --global http.lowSpeedTime 600
-          git config --global core.compression 1
-          git config --global pack.windowMemory "512m"
-          git config --global pack.threads 1
+          TARBALL="bazel-toolchain-${{ env.REAL_CONFIG }}.tar.gz"
+          echo "压缩为 $TARBALL ..."
+          tar czf "$TARBALL" . \
+            --exclude='.repo' \
+            --exclude='.git' \
+            --exclude='*.tar.gz'
 
-          git checkout -q -b "$TARGET_BRANCH"
-
-          echo "添加所有文件..."
-          git add . > /dev/null 2>&1
-
-          echo "提交更改..."
-          git commit -q -m "Kernel source ${{ env.REAL_CONFIG }} (patch ${{ inputs.os_patch_level }})"
-
-          # 压缩优化
-          echo "优化仓库..."
-          git gc --aggressive --prune=now --quiet 2>/dev/null || true
+          TARBALL_SIZE=$(du -sh "$TARBALL" | cut -f1)
+          echo "压缩包大小: $TARBALL_SIZE"
 
           echo "========================================="
-          echo "推送到 $TARGET_REPO 分支 $TARGET_BRANCH"
-          echo "仓库大小: $(du -sh .git | cut -f1)"
+          echo "上传到 Release: ${{ inputs.release_tag }}"
           echo "========================================="
 
-          DELAY=$(( RANDOM % 11 + 5 ))
-          echo "等待 ${DELAY} 秒..."
-          sleep $DELAY
-
-          PUSH_URL="https://x-access-token:${GIT_TOKEN}@github.com/${TARGET_REPO}.git"
-
-          MAX_RETRIES=5
+          # 带重试的上传
+          MAX_RETRIES=3
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "推送尝试 $i/$MAX_RETRIES ..."
-            rm -f .git/objects/pack/tmp_pack_*
-
-            if [ $i -le 2 ]; then
-              PUSH_RESULT=$(git push --force "$PUSH_URL" "$TARGET_BRANCH" 2>&1) && { echo "推送成功！"; exit 0; } || true
-            else
-              echo "  使用 --no-thin 模式重试..."
-              PUSH_RESULT=$(git push --force --no-thin "$PUSH_URL" "$TARGET_BRANCH" 2>&1) && { echo "推送成功！"; exit 0; } || true
+            echo "上传尝试 $i/$MAX_RETRIES ..."
+            if gh release upload "${{ inputs.release_tag }}" "$TARBALL" \
+              -R "${{ github.repository }}" --clobber 2>&1; then
+              echo "上传成功！"
+              exit 0
             fi
-
-            if echo "$PUSH_RESULT" | grep -q "Everything up-to-date"; then
-              REMOTE_SHA=$(git ls-remote "$PUSH_URL" "$TARGET_BRANCH" | awk '{print $1}')
-              LOCAL_SHA=$(git rev-parse HEAD)
-              if [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
-                echo "远程已存在相同提交 (SHA: ${REMOTE_SHA:0:7})"
-                exit 0
-              fi
-            fi
-
-            echo "$PUSH_RESULT" | tail -5
-
             if [ $i -lt $MAX_RETRIES ]; then
-              WAIT=$(( i * 60 + RANDOM % 30 ))
-              echo "推送失败，等待 ${WAIT} 秒后重试..."
+              WAIT=$(( i * 30 + RANDOM % 15 ))
+              echo "上传失败，等待 ${WAIT} 秒后重试..."
               sleep $WAIT
-              git gc --prune=now --quiet 2>/dev/null || true
             fi
           done
 
-          echo "推送最终失败！"
+          echo "上传最终失败！"
           exit 1
