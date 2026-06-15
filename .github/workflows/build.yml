@@ -142,7 +142,8 @@ jobs:
           find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
 
           echo "初始化 Git 仓库..."
-          git init -q
+          mkdir -p .git/info
+          git init -q --template=
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
