@@ -12,7 +12,7 @@ jobs:
     name: "${{ matrix.android_version }}-${{ matrix.kernel_version }}.${{ matrix.sub_level }}"
     strategy:
       fail-fast: false
-      max-parallel: 1             # 单任务串行，避免触发 GitHub / Google 速率限制
+      max-parallel: 5             # 单任务串行，避免触发 GitHub / Google 速率限制
       matrix:
         include:
           # ================== 5.10 (Android 12) ==================
