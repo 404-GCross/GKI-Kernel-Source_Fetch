@@ -124,7 +124,7 @@ jobs:
             [[ -n "$EXTRACTED" ]] && ACTUAL_SUBLEVEL="$EXTRACTED"
           fi
           echo "ACTUAL_SUBLEVEL=$ACTUAL_SUBLEVEL" >> $GITHUB_ENV
-          REAL_CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${ACTUAL_SUBLEVEL}"
+          REAL_CONFIG="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${ACTUAL_SUBLEVEL}-common"
           echo "REAL_CONFIG=$REAL_CONFIG" >> $GITHUB_ENV
           echo "实际子版本号: $ACTUAL_SUBLEVEL → 配置标识: $REAL_CONFIG"
 
