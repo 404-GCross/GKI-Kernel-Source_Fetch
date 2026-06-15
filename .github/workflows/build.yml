@@ -144,46 +144,80 @@ jobs:
           echo "初始化 Git 仓库..."
           git init -q
 
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # =========================================================
+          # 大仓库推送优化：内核源码 3~5 GB，需分批提交推送
+          # =========================================================
+
+          # 全局配置：HTTP/1.1 + 大缓冲区 + 禁用压缩
+          git config --global http.version HTTP/1.1
+          git config --global http.postBuffer 2147483648
+          git config --global http.lowSpeedLimit 0
+          git config --global http.lowSpeedTime 600
+          git config --global core.compression 0
+          git config --global pack.windowMemory "256m"
+          git config --global pack.packSizeLimit "512m"
+          git config --global pack.threads 1
+
           git checkout -q -b "$TARGET_BRANCH"
 
           echo "添加所有文件..."
           git add . > /dev/null 2>&1
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
           echo "提交更改..."
           git commit -q -m "Kernel source ${{ env.REAL_CONFIG }} (patch ${{ inputs.os_patch_level }})"
 
-          # 针对大仓库的 Git 配置优化
-          git config --global http.postBuffer 524288000
-          git config --global http.lowSpeedLimit 0
-          git config --global http.lowSpeedTime 300
+          # 清理优化本地仓库
+          git gc --aggressive --prune=now --quiet 2>/dev/null || true
 
           echo "========================================="
-          echo "推送到 $TARGET_REPO 分支 $TARGET_BRANCH ..."
+          echo "推送到 $TARGET_REPO 分支 $TARGET_BRANCH"
+          echo "仓库大小: $(du -sh .git | cut -f1)"
           echo "========================================="
 
-          # 随机延迟 5~15 秒，避免并发过高触发滥用检测
+          # 随机延迟 5~15 秒
           DELAY=$(( RANDOM % 11 + 5 ))
           echo "等待 ${DELAY} 秒..."
           sleep $DELAY
 
-          # 重试推送最多 5 次，等待时间递增以应对 GitHub rate limit
+          # 推送：先尝试普通 push，失败后用 --no-thin
+          PUSH_URL="https://x-access-token:${GIT_TOKEN}@github.com/${TARGET_REPO}.git"
+
+          do_push() {
+            git push --force "$1" "$TARGET_BRANCH" 2>&1
+          }
+
           MAX_RETRIES=5
           for i in $(seq 1 $MAX_RETRIES); do
             echo "推送尝试 $i/$MAX_RETRIES ..."
-            # 推送前清理本地包文件（避免残留数据）
             rm -f .git/objects/pack/tmp_pack_*
-            if git push --force "https://x-access-token:${GIT_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_BRANCH" 2>&1; then
-              echo "推送成功！"
-              exit 0
+
+            # 第 1-2 次用普通推送，第 3+ 次用 --no-thin（避免 thin pack 协议问题）
+            if [ $i -le 2 ]; then
+              PUSH_RESULT=$(do_push "$PUSH_URL") && { echo "推送成功！"; exit 0; } || true
+            else
+              echo "  使用 --no-thin 模式重试..."
+              PUSH_RESULT=$(git push --force --no-thin "$PUSH_URL" "$TARGET_BRANCH" 2>&1) && { echo "推送成功！"; exit 0; } || true
             fi
+
+            # 检查是否实际已推送（HTTP 500 但 Everything up-to-date = 已成功）
+            if echo "$PUSH_RESULT" | grep -q "Everything up-to-date"; then
+              REMOTE_SHA=$(git ls-remote "$PUSH_URL" "$TARGET_BRANCH" | awk '{print $1}')
+              LOCAL_SHA=$(git rev-parse HEAD)
+              if [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
+                echo "远程已存在相同提交，跳过 (SHA: ${REMOTE_SHA:0:7})"
+                exit 0
+              fi
+            fi
+
+            echo "$PUSH_RESULT" | tail -5
+
             if [ $i -lt $MAX_RETRIES ]; then
               WAIT=$(( i * 60 + RANDOM % 30 ))
               echo "推送失败，等待 ${WAIT} 秒后重试..."
               sleep $WAIT
-              # 重置本地仓库状态
               git gc --prune=now --quiet 2>/dev/null || true
             fi
           done
