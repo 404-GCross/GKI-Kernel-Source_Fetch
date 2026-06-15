@@ -135,33 +135,19 @@ jobs:
           GIT_TOKEN: ${{ secrets.SCRIPT_REPO_PAT }}
         run: |
           set -euo pipefail
+          cd "$KERNEL_ROOT"
 
-          # 只推送 common/ 内核源码目录，忽略 manifest 中的其他项目（工具链等）
-          KERNEL_SRC_DIR="$KERNEL_ROOT/common"
-          if [ ! -d "$KERNEL_SRC_DIR" ]; then
-            echo "错误: common/ 目录不存在"
-            exit 1
-          fi
+          echo "清理 .repo 和 .git 目录..."
+          rm -rf .repo
+          find . -type d -name ".git" -exec rm -rf {} + 2>/dev/null || true
 
-          cd "$KERNEL_SRC_DIR"
-
-          echo "清理 .repo 残留..."
-          rm -rf "$KERNEL_ROOT/.repo"
-
-          echo "初始化 Git 仓库（仅 common/ 内核源码）..."
+          echo "初始化 Git 仓库..."
           git init -q
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 排除构建产物和二进制文件
-          printf '%s\n' \
-            '*.o' '*.ko' '*.mod' '*.mod.c' '*.symvers' '*.order' \
-            '*.builtin' '*.tmp_*' '.tmp_vmlinux*' 'vmlinux' 'vmlinux.o' \
-            'System.map' 'Module.symvers' 'modules.builtin' 'modules.order' \
-            > .gitignore
-
-          # Git 配置：HTTP/1.1 + 大缓冲区 + 轻度压缩
+          # Git 配置：HTTP/1.1 + 大缓冲区
           git config --global http.version HTTP/1.1
           git config --global http.postBuffer 2147483648
           git config --global http.lowSpeedLimit 0
@@ -172,7 +158,7 @@ jobs:
 
           git checkout -q -b "$TARGET_BRANCH"
 
-          echo "添加文件（仅 common/）..."
+          echo "添加所有文件..."
           git add . > /dev/null 2>&1
 
           echo "提交更改..."
@@ -181,12 +167,10 @@ jobs:
           # 压缩优化
           echo "优化仓库..."
           git gc --aggressive --prune=now --quiet 2>/dev/null || true
-          git repack -adf --window=50 --depth=10 --quiet 2>/dev/null || true
 
           echo "========================================="
           echo "推送到 $TARGET_REPO 分支 $TARGET_BRANCH"
           echo "仓库大小: $(du -sh .git | cut -f1)"
-          echo "文件数:   $(git ls-files | wc -l)"
           echo "========================================="
 
           DELAY=$(( RANDOM % 11 + 5 ))
@@ -200,7 +184,6 @@ jobs:
             echo "推送尝试 $i/$MAX_RETRIES ..."
             rm -f .git/objects/pack/tmp_pack_*
 
-            # 第 1-2 次普通推送，第 3+ 次用 --no-thin
             if [ $i -le 2 ]; then
               PUSH_RESULT=$(git push --force "$PUSH_URL" "$TARGET_BRANCH" 2>&1) && { echo "推送成功！"; exit 0; } || true
             else
@@ -208,7 +191,6 @@ jobs:
               PUSH_RESULT=$(git push --force --no-thin "$PUSH_URL" "$TARGET_BRANCH" 2>&1) && { echo "推送成功！"; exit 0; } || true
             fi
 
-            # HTTP 500 但 Everything up-to-date = 实际已推送成功
             if echo "$PUSH_RESULT" | grep -q "Everything up-to-date"; then
               REMOTE_SHA=$(git ls-remote "$PUSH_URL" "$TARGET_BRANCH" | awk '{print $1}')
               LOCAL_SHA=$(git rev-parse HEAD)

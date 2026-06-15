@@ -9,8 +9,30 @@ on:
   workflow_call:
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.set_tag.outputs.release_tag }}
+    steps:
+      - name: 生成 Release 标签
+        id: set_tag
+        run: echo "release_tag=android13-5.15-sources-${{ github.run_number }}" >> $GITHUB_OUTPUT
+      - name: 创建 Release（如果不存在）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.set_tag.outputs.release_tag }}"
+          if ! gh release view "$TAG" -R ${{ github.repository }} &>/dev/null; then
+            gh release create "$TAG" -R ${{ github.repository }} \
+              --title "Android 13 (5.15) 内核源码 - 运行 #${{ github.run_number }}" \
+              --notes "包含所有安全补丁版本的源码分卷，请下载所有分卷及校验文件后合并解压。"
+          else
+            echo "Release $TAG 已存在，跳过创建。"
+          fi
+
   publish-sources:
     name: "5.15.${{ matrix.sub_level }}-${{ matrix.os_patch_level }}"
+    needs: create-release
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -63,3 +85,4 @@ jobs:
       kernel_version: "5.15"
       sub_level: ${{ matrix.sub_level }}
       os_patch_level: ${{ matrix.os_patch_level }}
+      release_tag: ${{ needs.create-release.outputs.release_tag }}
