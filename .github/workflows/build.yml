@@ -151,12 +151,13 @@ jobs:
           TOOLCHAIN_SIZE=$(du -sh . | cut -f1)
           echo "剩余工具链大小: $TOOLCHAIN_SIZE"
 
-          TARBALL="bazel-toolchain-${{ env.REAL_CONFIG }}.tar.gz"
+          TARBALL="$RUNNER_TEMP/bazel-toolchain-${{ env.REAL_CONFIG }}.tar.gz"
           echo "压缩为 $TARBALL ..."
-          tar czf "$TARBALL" . \
+          tar czf "$TARBALL" \
             --exclude='.repo' \
             --exclude='.git' \
-            --exclude='*.tar.gz'
+            --exclude='*.tar.gz' \
+            .
 
           TARBALL_SIZE=$(du -sh "$TARBALL" | cut -f1)
           echo "压缩包大小: $TARBALL_SIZE"
