@@ -108,3 +108,37 @@ jobs:
       os_patch_level: ${{ matrix.os_patch_level }}
       release_tag: ${{ inputs.release_tag }}
       part_size: ${{ inputs.part_size }}
+
+  update-download-scripts:
+    name: 更新下载脚本 Release 指针
+    needs: publish-full-sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码仓库
+        uses: actions/checkout@v4
+
+      - name: 更新脚本中的仓库与 Release 标签
+        run: |
+          set -euo pipefail
+
+          RELEASE_REPO="${{ github.repository }}"
+          RELEASE_TAG="${{ inputs.release_tag }}"
+
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+
+          for script in fetch_kernel_source.sh fetch_kernel_source_no-extract.sh; do
+            sed -i -E "s|^REPO=.*|REPO=\"${RELEASE_REPO}\"|" "$script"
+            sed -i -E "s|^TAG=.*|TAG=\"${RELEASE_TAG}\"|" "$script"
+          done
+
+          if git diff --quiet -- fetch_kernel_source.sh fetch_kernel_source_no-extract.sh; then
+            echo "下载脚本已指向 ${RELEASE_REPO}/${RELEASE_TAG}，无需更新。"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fetch_kernel_source.sh fetch_kernel_source_no-extract.sh
+          git commit -m "chore: update source download release tag to ${RELEASE_TAG}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
