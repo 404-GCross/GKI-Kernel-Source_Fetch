@@ -7,6 +7,7 @@ permissions:
 on:
   schedule:
     - cron: '0 0 1 * *'           # 每月 1 日 UTC 0:00 自动运行
+  workflow_dispatch:
 
 jobs:
   pull-sources:
