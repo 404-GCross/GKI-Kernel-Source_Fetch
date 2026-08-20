@@ -1,4 +1,4 @@
-name: 一键拉取所有内核源码 (5.10~6.12)
+name: 一键拉取所有内核源码 (5.10~6.18)
 
 permissions:
   contents: write
@@ -14,10 +14,14 @@ jobs:
     name: "${{ matrix.android_version }}-${{ matrix.kernel_version }}.${{ matrix.sub_level }}"
     strategy:
       fail-fast: false
-      max-parallel: 8             # 单任务串行，避免触发 GitHub / Google 速率限制
+      max-parallel: 8             # 限制并发，避免触发 GitHub / Google 速率限制
       matrix:
         include:
           # ================== 5.10 (Android 12) ==================
+          - android_version: android12
+            kernel_version: "5.10"
+            sub_level: "43"
+            os_patch_level: "2021-10"
           - android_version: android12
             kernel_version: "5.10"
             sub_level: "66"
@@ -108,6 +112,10 @@ jobs:
             os_patch_level: "lts"
 
           # ================== 5.15 (Android 13) ==================
+          - android_version: android13
+            kernel_version: "5.15"
+            sub_level: "41"
+            os_patch_level: "2022-11"
           - android_version: android13
             kernel_version: "5.15"
             sub_level: "74"
@@ -280,6 +288,10 @@ jobs:
             os_patch_level: "2026-03"
           - android_version: android14
             kernel_version: "6.1"
+            sub_level: "172"
+            os_patch_level: "2026-06"
+          - android_version: android14
+            kernel_version: "6.1"
             sub_level: "X"
             os_patch_level: "lts"
 
@@ -342,6 +354,10 @@ jobs:
             os_patch_level: "2026-04"
           - android_version: android15
             kernel_version: "6.6"
+            sub_level: "139"
+            os_patch_level: "2026-07"
+          - android_version: android15
+            kernel_version: "6.6"
             sub_level: "X"
             os_patch_level: "lts"
 
@@ -364,6 +380,24 @@ jobs:
             os_patch_level: "2025-12"
           - android_version: android16
             kernel_version: "6.12"
+            sub_level: "69"
+            os_patch_level: "2026-03"
+          - android_version: android16
+            kernel_version: "6.12"
+            sub_level: "81"
+            os_patch_level: "2026-06"
+          - android_version: android16
+            kernel_version: "6.12"
+            sub_level: "X"
+            os_patch_level: "lts"
+
+          # ================== 6.18 (Android 17) ==================
+          - android_version: android17
+            kernel_version: "6.18"
+            sub_level: "21"
+            os_patch_level: "2026-06"
+          - android_version: android17
+            kernel_version: "6.18"
             sub_level: "X"
             os_patch_level: "lts"
 

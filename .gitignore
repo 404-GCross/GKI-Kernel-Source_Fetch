@@ -4,6 +4,9 @@ speedtest.mp4
 # Node.js dependencies
 web/node_modules/
 
+# Web build output
+web/dist/
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -30,11 +30,12 @@ MIRRORS=(
 )
 
 declare -A VERSIONS=(
-    ["android12-5.10"]="66 81 101 110 117 136 149 160 168 177 185 198 205 209 218 226 233 236 237 240 246 X"
-    ["android13-5.15"]="74 78 94 104 119 123 137 144 148 149 151 153 167 170 178 180 185 189 194 X"
-    ["android14-6.1"]="25 43 57 68 75 78 84 90 93 99 112 115 118 124 128 129 134 138 141 145 157 162 X"
-    ["android15-6.6"]="50 56 57 58 66 77 82 87 89 92 98 102 118 127 X"
-    ["android16-6.12"]="23 30 38 58"
+    ["android12-5.10"]="43 66 81 101 110 117 136 149 160 168 177 185 198 205 209 218 226 233 236 237 240 246 256 X"
+    ["android13-5.15"]="41 74 78 94 104 119 123 137 144 148 149 151 153 167 170 178 180 185 189 194 207 X"
+    ["android14-6.1"]="25 43 57 68 75 78 84 90 93 99 112 115 118 124 128 129 134 138 141 145 157 162 172 173 X"
+    ["android15-6.6"]="50 56 57 58 66 77 82 87 89 92 98 102 118 127 139 X"
+    ["android16-6.12"]="23 30 38 58 69 81 X"
+    ["android17-6.18"]="21 X"
 )
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -271,7 +272,7 @@ resolve_lts_version() {
     fi
     # Parse asset names like kernel-source-android12-5.10-123.tar.gz.sha256.
     local real_sub
-    real_sub=$(grep -o "kernel-source-${major}-[0-9]*\.tar\.gz\.sha256" "$tmpjson" | head -n1 | sed "s/kernel-source-${major}-//; s/\.tar\.gz\.sha256//")
+    real_sub=$(grep -o "kernel-source-${major}-[0-9]*\.tar\.gz\.sha256" "$tmpjson" | sed "s/kernel-source-${major}-//; s/\.tar\.gz\.sha256//" | sort -n | tail -n1)
     rm -f "$tmpjson"
     if [ -z "$real_sub" ]; then
         echo -e "${RED}$(text lts_not_found "$major")${NC}"

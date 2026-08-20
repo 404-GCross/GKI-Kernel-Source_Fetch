@@ -1,0 +1,11 @@
+{
+  "android_version": "android17",
+  "kernel_version": "6.18",
+  "lts": "6.18.32",
+  "entries": [
+    {
+      "date": "2026-06",
+      "kernel": "6.18.21"
+    }
+  ]
+}

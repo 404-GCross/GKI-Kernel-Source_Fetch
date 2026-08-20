@@ -28,11 +28,12 @@ MIRRORS=(
 )
 
 declare -A VERSIONS=(
-    ["android12-5.10"]="66 81 101 110 117 136 149 160 168 177 185 198 205 209 218 226 233 236 237 240 246 X"
-    ["android13-5.15"]="74 78 94 104 119 123 137 144 148 149 151 153 167 170 178 180 185 189 194 X"
-    ["android14-6.1"]="25 43 57 68 75 78 84 90 93 99 112 115 118 124 128 129 134 138 141 145 157 162 X"
-    ["android15-6.6"]="50 56 57 58 66 77 82 87 89 92 98 102 118 127 X"
-    ["android16-6.12"]="23 30 38 58"
+    ["android12-5.10"]="43 66 81 101 110 117 136 149 160 168 177 185 198 205 209 218 226 233 236 237 240 246 256 X"
+    ["android13-5.15"]="41 74 78 94 104 119 123 137 144 148 149 151 153 167 170 178 180 185 189 194 207 X"
+    ["android14-6.1"]="25 43 57 68 75 78 84 90 93 99 112 115 118 124 128 129 134 138 141 145 157 162 172 173 X"
+    ["android15-6.6"]="50 56 57 58 66 77 82 87 89 92 98 102 118 127 139 X"
+    ["android16-6.12"]="23 30 38 58 69 81 X"
+    ["android17-6.18"]="21 X"
 )
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -103,6 +104,16 @@ text() {
         en:invalid_option) printf "Invalid option" ;;
         zh:no_input) printf "未收到输入，退出。" ;;
         en:no_input) printf "No input received; exiting." ;;
+        zh:release_fetch_failed) printf "无法获取 Release 信息，请检查网络" ;;
+        en:release_fetch_failed) printf "Failed to fetch Release metadata. Please check your network." ;;
+        zh:lts_not_found) printf "未在 Release 中找到 %s 的 LTS 真实版本" "$1" ;;
+        en:lts_not_found) printf "Could not find the real LTS version for %s in the Release assets" "$1" ;;
+        zh:resolving_lts) printf "正在获取 %s 的最新 LTS 版本号..." "$1" ;;
+        en:resolving_lts) printf "Resolving the latest LTS version for %s..." "$1" ;;
+        zh:resolve_lts_failed) printf "无法自动确定 LTS 版本，请重新选择或检查网络" ;;
+        en:resolve_lts_failed) printf "Could not resolve the LTS version automatically. Select another version or check your network." ;;
+        zh:lts_real_version) printf "LTS 真实版本：%s" "$1" ;;
+        en:lts_real_version) printf "Resolved LTS version: %s" "$1" ;;
         zh:select_major) printf "选择内核大版本：" ;;
         en:select_major) printf "Select Android/kernel major version:" ;;
         zh:select_sub) printf "选择小版本：" ;;
@@ -240,6 +251,25 @@ download() {
     curl -fSL --retry 3 --retry-delay 5 -# -o "$dest" "$url"
 }
 
+# Resolve the real LTS sublevel for a major version from Release assets.
+resolve_lts_version() {
+    local major="$1"   # Example: android12-5.10
+    local api_url="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
+    local tmpjson=$(mktemp --tmpdir="${TMPDIR:-$PWD/.tmp}")
+    if ! curl -sL --retry 2 --connect-timeout 10 "$api_url" -o "$tmpjson"; then
+        echo -e "${RED}$(text release_fetch_failed)${NC}"
+        return 1
+    fi
+    local real_sub
+    real_sub=$(grep -o "kernel-source-${major}-[0-9]*\.tar\.gz\.sha256" "$tmpjson" | sed "s/kernel-source-${major}-//; s/\.tar\.gz\.sha256//" | sort -n | tail -n1)
+    rm -f "$tmpjson"
+    if [ -z "$real_sub" ]; then
+        echo -e "${RED}$(text lts_not_found "$major")${NC}"
+        return 1
+    fi
+    echo "$real_sub"
+}
+
 main() {
     choose_script_lang
     check_deps
@@ -251,6 +281,18 @@ main() {
     IFS=' ' read -ra subs <<< "${VERSIONS[$major]}"
     local sub
     sub=$(select_option "$(text select_sub)" "${subs[@]}") || exit 1
+
+    # Resolve the real sublevel if X is selected.
+    if [[ "$sub" == "X" ]]; then
+        echo -e "${YELLOW}$(text resolving_lts "$major")${NC}"
+        local resolved
+        resolved=$(resolve_lts_version "$major") || {
+            echo -e "${RED}$(text resolve_lts_failed)${NC}"
+            exit 1
+        }
+        echo -e "${GREEN}$(text lts_real_version "$resolved")${NC}"
+        sub="$resolved"
+    fi
 
     local vid="${major}-${sub}"
     local sha="kernel-source-${vid}.tar.gz.sha256"

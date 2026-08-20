@@ -50,7 +50,7 @@ bash <(curl -sSL https://gh-proxy.com/https://raw.githubusercontent.com/404-GCro
 
 交互式脚本提供以下功能：
 
-版本选择：支持 Android 12 ~ 16，内核版本 5.10 / 5.15 / 6.1 / 6.6 / 6.12
+版本选择：支持 Android 12 ~ 17，内核版本 5.10 / 5.15 / 6.1 / 6.6 / 6.12 / 6.18
 
 镜像加速：内置多个国内可用的 GitHub 镜像源
 
@@ -63,17 +63,19 @@ bash <(curl -sSL https://gh-proxy.com/https://raw.githubusercontent.com/404-GCro
 合并解压：将分卷文件合并为一个完整的 tar.gz 包并解压
 
 ## 📊 支持的内核版本
-Android 12	5.10	66 / 81 / 101 / 110 / 198 / 246 等 22 个版本
+Android 12	5.10	43 / 66 / 81 / 101 / 198 / 246 / 256 等版本
 
-Android 13	5.15	74 / 78 / 94 / 104 / 170 / 194 等 20 个版本
+Android 13	5.15	41 / 74 / 78 / 94 / 170 / 194 / 207 等版本
 
-Android 14	6.1	25 / 43 / 57 / 68 / 129 / 162 等 23 个版本
+Android 14	6.1	25 / 43 / 57 / 68 / 129 / 162 / 172 / 173 等版本
 
-Android 15	6.6	50 / 56 / 57 / 58 / 77 / 127 等 15 个版本
+Android 15	6.6	50 / 56 / 57 / 58 / 77 / 127 / 139 等版本
 
-Android 16	6.12	23 / 30 / 38 / 58
+Android 16	6.12	23 / 30 / 38 / 58 / 69 / 81 等版本
 
-包含 lts 长期支持版本（小版本号标记为 X）。
+Android 17	6.18	21 等版本
+
+包含 LTS 长期支持版本（小版本号标记为 X），当前数据记录的 LTS 为 5.10.264 / 5.15.211 / 6.1.176 / 6.6.142 / 6.12.92 / 6.18.32。
 
 ## 🔗 相关链接
 原项目：[GKI_KernelSU_SUSFS - 自动化构建 GKI 内核 | 集成 KernelSU + SUSFS](https://github.com/zzh20188/GKI_KernelSU_SUSFS)
