@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # ============================================================
 # Script: fetch_kernel_source_no-extract.sh
-# Purpose: Download GKI kernel source split archives from a fixed Release,
-#          verify and merge them. By default, this keeps the .tar.gz file
-#          without extracting it.
+# Purpose: Download complete GKI kernel source environment split archives
+#          from a fixed Release, verify and merge them. By default, this
+#          keeps the .tar.zst file without extracting it.
 # Language: choose at startup, or set SCRIPT_LANG=en/zh to skip the prompt.
-# Dependencies: curl, awk (gawk), sha256sum, tar
+# Dependencies: curl, awk (gawk), sha256sum, tar, zstd
 # ============================================================
 set -euo pipefail
 
 # -------------------- Fixed repository and tag --------------------
-REPO="404-GCross/Kernel-Source_Pull"
-TAG="all-kernel-sources-20260608-27112872553"
+REPO="404-GCross/GKI-Kernel-Source_Fetch"
+TAG="all-full-kernel-sources"
 # --------------------------------------------------------
 
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PWD}/kernel-sources}"
-KEEP_TARBALL="${KEEP_TARBALL:-yes}"          # Keep tar.gz by default when not extracting.
+KEEP_TARBALL="${KEEP_TARBALL:-yes}"          # Keep tar.zst by default when not extracting.
 FLAT_OUTPUT="${FLAT_OUTPUT:-no}"             # Use flat output when extracting.
 EXTRACT="${EXTRACT:-no}"                     # Extract archive. Default: no.
 
@@ -110,6 +110,8 @@ text() {
         en:release_fetch_failed) printf "Failed to fetch Release metadata. Please check your network." ;;
         zh:lts_not_found) printf "未在 Release 中找到 %s 的 LTS 真实版本" "$1" ;;
         en:lts_not_found) printf "Could not find the real LTS version for %s in the Release assets" "$1" ;;
+        zh:full_asset_not_found) printf "未在 Release 中找到 %s.%s 的完整源码环境包" "$1" "$2" ;;
+        en:full_asset_not_found) printf "Could not find the full source environment archive for %s.%s in the Release assets" "$1" "$2" ;;
         zh:select_major) printf "选择内核大版本：" ;;
         en:select_major) printf "Select Android/kernel major version:" ;;
         zh:select_sub) printf "选择小版本：" ;;
@@ -120,6 +122,8 @@ text() {
         en:resolve_lts_failed) printf "Could not resolve the LTS version automatically. Select another version or check your network." ;;
         zh:lts_real_version) printf "LTS 真实版本：%s" "$1" ;;
         en:lts_real_version) printf "Resolved LTS version: %s" "$1" ;;
+        zh:archive_name) printf "完整源码环境包：%s" "$1" ;;
+        en:archive_name) printf "Full source environment archive: %s" "$1" ;;
         zh:target_version) printf "目标版本：%s" "$1" ;;
         en:target_version) printf "Target version: %s" "$1" ;;
         zh:direct_source) printf "直连（不使用镜像）" ;;
@@ -185,6 +189,9 @@ check_deps() {
     local missing=()
     if ! command -v curl &>/dev/null; then missing+=("curl"); fi
     if ! command -v awk &>/dev/null; then missing+=("gawk"); fi
+    if ! command -v sha256sum &>/dev/null; then missing+=("coreutils"); fi
+    if ! command -v tar &>/dev/null; then missing+=("tar"); fi
+    if ! command -v zstd &>/dev/null; then missing+=("zstd"); fi
     if [ ${#missing[@]} -gt 0 ]; then
         echo -e "${YELLOW}$(text missing_deps "${missing[*]}")${NC}"
         if command -v apt-get &>/dev/null; then
@@ -261,26 +268,37 @@ download() {
     curl -fSL --retry 3 --retry-delay 5 -# -o "$dest" "$url"
 }
 
-# Resolve the real LTS sublevel for a major version from Release assets.
-resolve_lts_version() {
-    local major="$1"   # Example: android12-5.10
+fetch_release_metadata() {
+    local dest="$1"
     local api_url="https://api.github.com/repos/${REPO}/releases/tags/${TAG}"
-    local tmpjson=$(mktemp --tmpdir="${TMPDIR:-$PWD/.tmp}")
-    if ! curl -sL --retry 2 --connect-timeout 10 "$api_url" -o "$tmpjson"; then
-        echo -e "${RED}$(text release_fetch_failed)${NC}"
-        return 1
-    fi
-    # Parse asset names like kernel-source-android12-5.10-123.tar.gz.sha256.
-    local real_sub
-    real_sub=$(grep -o "kernel-source-${major}-[0-9]*\.tar\.gz\.sha256" "$tmpjson" | sed "s/kernel-source-${major}-//; s/\.tar\.gz\.sha256//" | sort -n | tail -n1)
-    rm -f "$tmpjson"
-    if [ -z "$real_sub" ]; then
-        echo -e "${RED}$(text lts_not_found "$major")${NC}"
-        return 1
-    fi
-    echo "$real_sub"
+    curl -sL --retry 2 --connect-timeout 10 "$api_url" -o "$dest"
 }
 
+find_full_archive() {
+    local major="$1"
+    local sub="$2"
+    local metadata="$3"
+    local pattern asset archive
+    if [[ "$sub" == "X" ]]; then
+        pattern="kernel-full-source-${major}-[0-9]+-lts\\.tar\\.zst\\.parts\\.sha256"
+    else
+        pattern="kernel-full-source-${major}-${sub}-[^\"[:space:]]*\\.tar\\.zst\\.parts\\.sha256"
+    fi
+    asset=$(grep -Eo "$pattern" "$metadata" | sort -V | tail -n1 || true)
+    if [[ -z "$asset" ]]; then
+        return 1
+    fi
+    archive="${asset%.parts.sha256}"
+    printf "%s\n" "$archive"
+}
+
+archive_sublevel() {
+    local major="$1"
+    local archive="$2"
+    local rest="${archive#kernel-full-source-${major}-}"
+    rest="${rest%.tar.zst}"
+    printf "%s\n" "${rest%%-*}"
+}
 main() {
     choose_script_lang
     check_deps
@@ -293,21 +311,39 @@ main() {
     local sub
     sub=$(select_option "$(text select_sub)" "${subs[@]}") || exit 1
 
-    # Resolve the real sublevel if X is selected.
-    if [[ "$sub" == "X" ]]; then
-        echo -e "${YELLOW}$(text resolving_lts "$major")${NC}"
-        local resolved
-        resolved=$(resolve_lts_version "$major") || {
-            echo -e "${RED}$(text resolve_lts_failed)${NC}"
-            exit 1
-        }
-        echo -e "${GREEN}$(text lts_real_version "$resolved")${NC}"
-        sub="$resolved"
+    local release_json
+    release_json=$(mktemp --tmpdir="${TMPDIR:-$PWD/.tmp}")
+    if ! fetch_release_metadata "$release_json"; then
+        echo -e "${RED}$(text release_fetch_failed)${NC}"
+        rm -f "$release_json"
+        exit 1
     fi
 
-    local vid="${major}-${sub}"
-    local sha="kernel-source-${vid}.tar.gz.sha256"
-    echo -e "${GREEN}$(text target_version "$vid")${NC}"
+    local archive
+    if [[ "$sub" == "X" ]]; then
+        echo -e "${YELLOW}$(text resolving_lts "$major")${NC}"
+        archive=$(find_full_archive "$major" "X" "$release_json") || {
+            echo -e "${RED}$(text resolve_lts_failed)${NC}"
+            rm -f "$release_json"
+            exit 1
+        }
+        sub=$(archive_sublevel "$major" "$archive")
+        echo -e "${GREEN}$(text lts_real_version "$sub")${NC}"
+    else
+        archive=$(find_full_archive "$major" "$sub" "$release_json") || {
+            echo -e "${RED}$(text full_asset_not_found "$major" "$sub")${NC}"
+            rm -f "$release_json"
+            exit 1
+        }
+    fi
+    rm -f "$release_json"
+
+    local full_id="${archive#kernel-full-source-}"
+    full_id="${full_id%.tar.zst}"
+    local parts_sha="${archive}.parts.sha256"
+    local archive_sha="${archive}.sha256"
+    echo -e "${GREEN}$(text target_version "$full_id")${NC}"
+    echo -e "${GREEN}$(text archive_name "$archive")${NC}"
 
     local direct_source custom_source
     direct_source="$(text direct_source)"
@@ -362,11 +398,14 @@ main() {
     trap "rm -rf '$tmpdir'" EXIT
 
     echo -e "${GREEN}$(text download_checksum_step)${NC}"
-    download "$sha" "$tmpdir/$sha" || {
+    download "$parts_sha" "$tmpdir/$parts_sha" || {
+        echo -e "${RED}$(text download_checksum_failed)${NC}"; exit 1
+    }
+    download "$archive_sha" "$tmpdir/$archive_sha" || {
         echo -e "${RED}$(text download_checksum_failed)${NC}"; exit 1
     }
 
-    local parts=($(awk '{print $2}' "$tmpdir/$sha"))
+    local parts=($(awk '{print $2}' "$tmpdir/$parts_sha"))
     echo -e "${GREEN}$(text download_parts_step "${#parts[@]}")${NC}"
     for part in "${parts[@]}"; do
         echo -n "   -> "
@@ -376,14 +415,17 @@ main() {
     done
 
     echo -e "${GREEN}$(text verify_step)${NC}"
-    (cd "$tmpdir" && sha256sum -c "$sha" --quiet) || {
+    (cd "$tmpdir" && sha256sum -c "$parts_sha" --quiet) || {
+        echo -e "${RED}$(text verify_failed)${NC}"; exit 1
+    }
+
+    local tar="$archive"
+    echo -e "${GREEN}$(text merge_step "$tar")${NC}"
+    cat "${parts[@]/#/$tmpdir/}" > "$tmpdir/$tar"
+    (cd "$tmpdir" && sha256sum -c "$archive_sha" --quiet) || {
         echo -e "${RED}$(text verify_failed)${NC}"; exit 1
     }
     echo -e "  ${GREEN}$(text verify_ok)${NC}"
-
-    local tar="kernel-source-${vid}.tar.gz"
-    echo -e "${GREEN}$(text merge_step "$tar")${NC}"
-    cat "${parts[@]/#/$tmpdir/}" > "$tmpdir/$tar"
 
     # Decide whether to extract or keep the archive only.
     if [[ "$EXTRACT" == "yes" ]]; then
@@ -391,11 +433,11 @@ main() {
         if [[ "$FLAT_OUTPUT" == "yes" ]]; then
             dest="$OUTPUT_DIR"
         else
-            dest="${OUTPUT_DIR}/kernel-source-${vid}"
+            dest="${OUTPUT_DIR}/${archive%.tar.zst}"
         fi
         mkdir -p "$dest"
         echo -e "${GREEN}$(text extract_step "$dest")${NC}"
-        tar xzf "$tmpdir/$tar" -C "$dest"
+        tar -I zstd -xf "$tmpdir/$tar" -C "$dest"
         if [[ "$KEEP_TARBALL" == "yes" ]]; then
             mv "$tmpdir/$tar" "${OUTPUT_DIR}/"
             echo -e "  $(text keep_tarball "${OUTPUT_DIR}/$tar")"
@@ -410,7 +452,7 @@ main() {
         echo -e "\n${GREEN}$(text done)${NC}"
         echo -e "$(text archive_path "${OUTPUT_DIR}/${tar}")"
         echo -e "$(text extract_hint)"
-        echo -e "  tar xzf ${OUTPUT_DIR}/${tar} -C $(text target_dir)"
+        echo -e "  tar -I zstd -xf ${OUTPUT_DIR}/${tar} -C $(text target_dir)"
     fi
 }
 
