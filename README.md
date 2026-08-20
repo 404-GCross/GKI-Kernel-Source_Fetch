@@ -21,6 +21,7 @@
 
 在 Linux 机器上运行以下命令即可从release中拉取内核源码到本地：
 
+脚本启动后的第一步会选择语言（中文 / English）。如需在自动化环境中跳过语言选择，可设置 `SCRIPT_LANG=zh` 或 `SCRIPT_LANG=en`。
 
 方式一：直连 GitHub
 ```bash
