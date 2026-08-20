@@ -16,7 +16,7 @@ on:
         description: "分卷大小，需低于 GitHub 单 asset 限制"
         required: true
         type: string
-        default: "1900M"
+        default: "1800M"
       include_lts:
         description: "是否包含各内核 LTS 分支"
         required: true

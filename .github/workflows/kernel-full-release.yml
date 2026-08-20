@@ -45,7 +45,7 @@ on:
         description: "分卷大小，需低于 GitHub 单 asset 限制"
         required: true
         type: string
-        default: "1900M"
+        default: "1800M"
   workflow_call:
     inputs:
       android_version:
@@ -226,24 +226,59 @@ jobs:
           set -euo pipefail
 
           RELEASE_TAG="${{ inputs.release_tag }}"
+          RELEASE_DATE="$(date -u +%Y-%m-%d)"
+          RELEASE_TITLE="全内核源码合集 - ${RELEASE_DATE}"
+
+          cat > release_notes.md << EOF
+          包含 Android 12~17 的 5.10/5.15/6.1/6.6/6.12/6.18 完整内核源码环境分卷，请下载对应版本的所有分卷及校验文件后合并解压。
+          EOF
+
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release 已存在: $RELEASE_TAG"
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TITLE" --notes-file release_notes.md
           else
-            cat > release_notes.md << EOF
-          # Full GKI kernel source environments
-
-          此 Release 用于存放完整 AOSP kernel manifest 工作树分卷包，包含源码、构建脚本、prebuilts/toolchain 等。
-          EOF
-            gh release create "$RELEASE_TAG" --title "Full GKI kernel source environments" --notes-file release_notes.md
+            gh release create "$RELEASE_TAG" --title "$RELEASE_TITLE" --notes-file release_notes.md
           fi
 
-          gh release upload "$RELEASE_TAG" \
-            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.part"* \
-            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.sha256" \
-            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.parts.sha256" \
-            "$GITHUB_WORKSPACE/full-release/${BASENAME}.manifest.xml" \
-            "$GITHUB_WORKSPACE/full-release/${BASENAME}.metadata.json" \
-            --clobber
+          shopt -s nullglob
+          assets=(
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.part"*
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.sha256"
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.parts.sha256"
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.manifest.xml"
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.metadata.json"
+          )
+
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "未找到待上传文件：$GITHUB_WORKSPACE/full-release/${BASENAME}*" >&2
+            exit 1
+          fi
+
+          upload_asset() {
+            local asset="$1"
+            local name
+            name="$(basename "$asset")"
+
+            for attempt in 1 2 3 4 5; do
+              echo "上传 ${name}，尝试 ${attempt}/5"
+              if gh release upload "$RELEASE_TAG" "$asset" --clobber; then
+                return 0
+              fi
+
+              if [ "$attempt" -lt 5 ]; then
+                local wait_time=$(( attempt * 20 ))
+                echo "上传失败，等待 ${wait_time} 秒后重试：${name}" >&2
+                sleep "$wait_time"
+              fi
+            done
+
+            echo "上传失败：${name}" >&2
+            return 1
+          }
+
+          for asset in "${assets[@]}"; do
+            upload_asset "$asset"
+          done
 
       - name: 构建摘要
         run: |
