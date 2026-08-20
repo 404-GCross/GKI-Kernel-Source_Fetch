@@ -13,7 +13,7 @@
 
 原项目是一个自动化构建 GKI 内核的项目，集成了 KernelSU / MKSU / SukiSU / ReSukiSU / KernelSU-Next + SUSFS 等特性，并支持 Droidspaces 容器、ZRAM 增强、BBG 防格机等功能。本 Fork 项目专注于 **一键拉取 Google 官方 GKI 内核源码**，并将其打包发布至 GitHub Release，方便开发者直接下载使用。
 
-一键拉取全部内核源码目录：支持手动触发，并在每月 1 日 UTC 0:00 自动执行
+一键拉取全部完整源码：手动触发后会按 `data/` 中记录的全部版本拉取完整 AOSP kernel manifest 工作树，并分包推送到 Release。
 
 ---
 
@@ -48,8 +48,9 @@ bash <(curl -sSL https://gh-proxy.com/https://raw.githubusercontent.com/404-GCro
 
 ## ⚙️ Actions 分工
 
-- `一键拉取全部内核源码目录 (每月自动)`：可手动一键触发，也会每月自动执行一次；只同步并推送 `common/` 内核源码目录到对应分支。
-- `完整源码环境分包发布`：手动触发，拉取完整 AOSP kernel manifest 工作树（源码、构建脚本、prebuilts/toolchain 等），压缩分卷后上传到指定 GitHub Release。
+- `一键拉取全部完整源码并推送 Release`：手动触发，按 `data/` 中记录的全部版本拉取完整 AOSP kernel manifest 工作树（源码、构建脚本、prebuilts/toolchain 等），压缩分卷后上传到指定 GitHub Release。
+- `完整源码环境分包发布`：手动触发单个版本，方便补包或重跑失败版本。
+- `每月同步内核源码目录 (common/)`：每月 1 日自动执行，也可手动触发；只同步并推送 `common/` 内核源码目录到对应分支。
 
 ## 🛠 脚本功能
 
