@@ -1,4 +1,4 @@
-name: 内核源码拉取 - Android 12 (5.10)
+name: 完整源码环境发布 - Android 12 (5.10)
 
 permissions:
   contents: write
@@ -6,7 +6,65 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "上传到的 Release 标签"
+        required: true
+        type: string
+        default: "full-kernel-sources"
+      part_size:
+        description: "分卷大小，需低于 GitHub 单 asset 限制"
+        required: true
+        type: string
+        default: "1900M"
   workflow_call:
+    inputs:
+      release_tag:
+        required: false
+        type: string
+        default: "full-kernel-sources"
+      part_size:
+        required: false
+        type: string
+        default: "1900M"
+      kernelsu_variant:
+        required: false
+        type: string
+      kernelsu_branch:
+        required: false
+        type: string
+      version:
+        required: false
+        type: string
+      build_time:
+        required: false
+        type: string
+      use_zram:
+        required: false
+        type: boolean
+        default: false
+      use_bbg:
+        required: false
+        type: boolean
+        default: false
+      use_kpm:
+        required: false
+        type: string
+      use_rekernel:
+        required: false
+        type: boolean
+        default: false
+      cancel_susfs:
+        required: false
+        type: boolean
+        default: false
+      droidspaces:
+        required: false
+        type: string
+      called_from_main:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   publish-sources:
@@ -62,10 +120,11 @@ jobs:
             os_patch_level: "2025-12"
           - sub_level: "X"
             os_patch_level: "lts"
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/kernel-full-release.yml
     secrets: inherit
     with:
       android_version: "android12"
       kernel_version: "5.10"
-      sub_level: ${{ matrix.sub_level }}
       os_patch_level: ${{ matrix.os_patch_level }}
+      release_tag: ${{ inputs.release_tag || 'full-kernel-sources' }}
+      part_size: ${{ inputs.part_size || '1900M' }}

@@ -1,4 +1,4 @@
-name: 内核源码拉取-自定义
+name: 完整源码环境发布-自定义
 
 permissions:
   contents: write
@@ -32,23 +32,29 @@ on:
           - "6.12"
           - "6.18"
         default: "5.10"
-      sub_level:
-        description: "子版本号 (如 66, 198, X)"
-        required: true
-        type: string
-        default: "66"
       os_patch_level:
-        description: "安全补丁级别 (如 2022-01, lts)"
+        description: "安全补丁级别或 lts，例如 2026-06 / lts"
         required: true
         type: string
         default: "2022-01"
+      release_tag:
+        description: "上传到的 Release 标签"
+        required: true
+        type: string
+        default: "full-kernel-sources"
+      part_size:
+        description: "分卷大小，需低于 GitHub 单 asset 限制"
+        required: true
+        type: string
+        default: "1900M"
 
 jobs:
-  publish-source:
-    uses: ./.github/workflows/build.yml
+  publish-full-source:
+    uses: ./.github/workflows/kernel-full-release.yml
     secrets: inherit
     with:
       android_version: ${{ inputs.android_version }}
       kernel_version: ${{ inputs.kernel_version }}
-      sub_level: ${{ inputs.sub_level }}
       os_patch_level: ${{ inputs.os_patch_level }}
+      release_tag: ${{ inputs.release_tag }}
+      part_size: ${{ inputs.part_size }}
