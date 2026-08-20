@@ -1,4 +1,4 @@
-name: 每月拉取内核源码目录 (5.10~6.18)
+name: 一键拉取全部内核源码目录 (每月自动)
 
 permissions:
   contents: write
