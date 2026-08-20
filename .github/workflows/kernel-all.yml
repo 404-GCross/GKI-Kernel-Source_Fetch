@@ -1,4 +1,4 @@
-name: 一键拉取所有内核源码 (5.10~6.18)
+name: 每月拉取内核源码目录 (5.10~6.18)
 
 permissions:
   contents: write
@@ -6,7 +6,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 0 */14 * *'        # 每14天 UTC 0:00 自动运行
+    - cron: '0 0 1 * *'           # 每月 1 日 UTC 0:00 自动运行
   workflow_dispatch:
 
 jobs:

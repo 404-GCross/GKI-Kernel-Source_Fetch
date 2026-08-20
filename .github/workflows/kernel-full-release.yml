@@ -1,0 +1,240 @@
+name: 完整源码环境分包发布
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      android_version:
+        description: "Android 版本"
+        required: true
+        type: choice
+        options:
+          - android12
+          - android13
+          - android14
+          - android15
+          - android16
+          - android17
+        default: android16
+      kernel_version:
+        description: "内核版本"
+        required: true
+        type: choice
+        options:
+          - "5.10"
+          - "5.15"
+          - "6.1"
+          - "6.6"
+          - "6.12"
+          - "6.18"
+        default: "6.12"
+      os_patch_level:
+        description: "安全补丁级别或 lts，例如 2026-06 / lts"
+        required: true
+        type: string
+        default: "lts"
+      release_tag:
+        description: "上传到的 Release 标签"
+        required: true
+        type: string
+        default: "full-kernel-sources"
+      part_size:
+        description: "分卷大小，需低于 GitHub 单 asset 限制"
+        required: true
+        type: string
+        default: "1900M"
+
+jobs:
+  publish-full-source:
+    name: "${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+      - name: 打印配置摘要
+        run: |
+          echo "========================================"
+          echo "       完整源码环境分包发布"
+          echo "========================================"
+          echo "Android 版本  : ${{ inputs.android_version }}"
+          echo "内核版本      : ${{ inputs.kernel_version }}"
+          echo "补丁级别      : ${{ inputs.os_patch_level }}"
+          echo "Release 标签  : ${{ inputs.release_tag }}"
+          echo "分卷大小      : ${{ inputs.part_size }}"
+          echo "========================================"
+
+      - name: 校验版本组合
+        run: |
+          case "${{ inputs.android_version }}-${{ inputs.kernel_version }}" in
+            android12-5.10|android13-5.15|android14-6.1|android15-6.6|android16-6.12|android17-6.18)
+              echo "版本组合有效"
+              ;;
+            *)
+              echo "无效版本组合：${{ inputs.android_version }} / ${{ inputs.kernel_version }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: 清理磁盘空间
+        uses: endersonmenezes/free-disk-space@v3
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell /usr/local/julia /usr/local/aws-cli /usr/local/aws-sam-cli /usr/share/gradle"
+          rm_cmd: "rmz"
+          rmz_version: "3.1.1"
+          testing: false
+
+      - name: 安装依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd jq
+          mkdir -p "$GITHUB_WORKSPACE/git-repo"
+          curl -L https://storage.googleapis.com/git-repo-downloads/repo -o "$GITHUB_WORKSPACE/git-repo/repo"
+          chmod 0755 "$GITHUB_WORKSPACE/git-repo/repo"
+          echo "$GITHUB_WORKSPACE/git-repo" >> "$GITHUB_PATH"
+          echo "REPO=$GITHUB_WORKSPACE/git-repo/repo" >> "$GITHUB_ENV"
+
+      - name: 配置 Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 同步完整源码环境
+        run: |
+          set -euo pipefail
+
+          FORMATTED_BRANCH="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${{ inputs.os_patch_level }}"
+          MANIFEST_BRANCH="common-${FORMATTED_BRANCH}"
+          KERNEL_ROOT="$GITHUB_WORKSPACE/full-${FORMATTED_BRANCH}"
+
+          mkdir -p "$KERNEL_ROOT"
+          cd "$KERNEL_ROOT"
+
+          echo "初始化 repo，分支: $MANIFEST_BRANCH"
+          "$REPO" init -u https://android.googlesource.com/kernel/manifest -b "$MANIFEST_BRANCH" --repo-rev=v2.16
+
+          REMOTE_BRANCH=$(git ls-remote https://android.googlesource.com/kernel/common "$FORMATTED_BRANCH" || true)
+          DEFAULT_MANIFEST_PATH=.repo/manifests/default.xml
+
+          if grep -q deprecated <<< "$REMOTE_BRANCH"; then
+            echo "检测到已弃用的 common 分支，调整 manifest"
+            sed -i "s/\"${FORMATTED_BRANCH}\"/\"deprecated\/${FORMATTED_BRANCH}\"/g" "$DEFAULT_MANIFEST_PATH"
+          fi
+
+          REPO_SYNC_MAX_RETRIES=3
+          for i in $(seq 1 "$REPO_SYNC_MAX_RETRIES"); do
+            echo "repo sync 尝试 $i/$REPO_SYNC_MAX_RETRIES ..."
+            if "$REPO" --trace sync -c -j4 --no-tags --fail-fast; then
+              echo "repo sync 成功！"
+              break
+            fi
+            if [ "$i" -lt "$REPO_SYNC_MAX_RETRIES" ]; then
+              WAIT=$(( i * 30 + RANDOM % 15 ))
+              echo "repo sync 失败，等待 ${WAIT} 秒后重试..."
+              sleep "$WAIT"
+            else
+              echo "repo sync 最终失败！"
+              exit 1
+            fi
+          done
+
+          ACTUAL_SUBLEVEL="${{ inputs.os_patch_level }}"
+          if [[ -f "$KERNEL_ROOT/common/Makefile" ]]; then
+            EXTRACTED=$(grep '^SUBLEVEL = ' "$KERNEL_ROOT/common/Makefile" | awk '{print $3}')
+            [[ -n "$EXTRACTED" ]] && ACTUAL_SUBLEVEL="$EXTRACTED"
+          fi
+
+          FULL_ID="${{ inputs.android_version }}-${{ inputs.kernel_version }}-${ACTUAL_SUBLEVEL}-${{ inputs.os_patch_level }}"
+          BASENAME="kernel-full-source-${FULL_ID}"
+
+          {
+            echo "FORMATTED_BRANCH=$FORMATTED_BRANCH"
+            echo "MANIFEST_BRANCH=$MANIFEST_BRANCH"
+            echo "KERNEL_ROOT=$KERNEL_ROOT"
+            echo "ACTUAL_SUBLEVEL=$ACTUAL_SUBLEVEL"
+            echo "FULL_ID=$FULL_ID"
+            echo "BASENAME=$BASENAME"
+          } >> "$GITHUB_ENV"
+
+      - name: 打包并分卷
+        run: |
+          set -euo pipefail
+
+          OUT_DIR="$GITHUB_WORKSPACE/full-release"
+          mkdir -p "$OUT_DIR"
+
+          cd "$KERNEL_ROOT"
+          "$REPO" manifest -r -o "$OUT_DIR/${BASENAME}.manifest.xml"
+
+          cat > "$OUT_DIR/${BASENAME}.metadata.json" << EOF
+          {
+            "android_version": "${{ inputs.android_version }}",
+            "kernel_version": "${{ inputs.kernel_version }}",
+            "os_patch_level": "${{ inputs.os_patch_level }}",
+            "manifest_branch": "$MANIFEST_BRANCH",
+            "actual_sublevel": "$ACTUAL_SUBLEVEL",
+            "archive": "${BASENAME}.tar.zst",
+            "part_size": "${{ inputs.part_size }}",
+            "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          ARCHIVE="$OUT_DIR/${BASENAME}.tar.zst"
+          echo "开始压缩完整源码环境: $ARCHIVE"
+          tar --exclude='./.repo' --exclude-vcs -I 'zstd -T0 -6' -cf "$ARCHIVE" -C "$KERNEL_ROOT" .
+
+          cd "$OUT_DIR"
+          sha256sum "${BASENAME}.tar.zst" > "${BASENAME}.tar.zst.sha256"
+          split -b "${{ inputs.part_size }}" -d -a 3 "${BASENAME}.tar.zst" "${BASENAME}.tar.zst.part"
+          sha256sum "${BASENAME}.tar.zst.part"* > "${BASENAME}.tar.zst.parts.sha256"
+          rm -f "${BASENAME}.tar.zst"
+
+          echo "生成文件："
+          ls -lh "$OUT_DIR"
+
+      - name: 创建或更新 Release
+        run: |
+          set -euo pipefail
+
+          RELEASE_TAG="${{ inputs.release_tag }}"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release 已存在: $RELEASE_TAG"
+          else
+            cat > release_notes.md << EOF
+          # Full GKI kernel source environments
+
+          此 Release 用于存放完整 AOSP kernel manifest 工作树分卷包，包含源码、构建脚本、prebuilts/toolchain 等。
+          EOF
+            gh release create "$RELEASE_TAG" --title "Full GKI kernel source environments" --notes-file release_notes.md
+          fi
+
+          gh release upload "$RELEASE_TAG" \
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.part"* \
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.sha256" \
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.tar.zst.parts.sha256" \
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.manifest.xml" \
+            "$GITHUB_WORKSPACE/full-release/${BASENAME}.metadata.json" \
+            --clobber
+
+      - name: 构建摘要
+        run: |
+          {
+            echo "## 完整源码环境已上传"
+            echo "- Release: ${{ inputs.release_tag }}"
+            echo "- Manifest 分支: $MANIFEST_BRANCH"
+            echo "- 实际子版本号: $ACTUAL_SUBLEVEL"
+            echo "- 文件前缀: $BASENAME"
+            echo "- 分卷大小: ${{ inputs.part_size }}"
+          } >> "$GITHUB_STEP_SUMMARY"
