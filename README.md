@@ -48,9 +48,9 @@ bash <(curl -sSL https://gh-proxy.com/https://raw.githubusercontent.com/404-GCro
 
 ## ⚙️ Actions 分工
 
-- `一键拉取全部完整源码并推送 Release`：手动触发，按 `data/` 中记录的全部版本拉取完整 AOSP kernel manifest 工作树（源码、构建脚本、prebuilts/toolchain 等），压缩分卷后上传到指定 GitHub Release。
+- `一键拉取全部完整源码并推送 Release`：手动触发，按 `data/` 中记录的全部版本拉取完整 AOSP kernel manifest 工作树（源码、构建脚本、prebuilts/toolchain 等），按自动分卷大小压缩后上传到自动生成的 GitHub Release（tag 格式为 all-full-kernel-sources-YYYYMMDD-RUN_ID）。
 - 一键全量 Release 上传完成后，会自动更新 `fetch_kernel_source.sh` 与 `fetch_kernel_source_no-extract.sh` 中的 `REPO` / `TAG`，让下载脚本指向最新 Release。
-- `完整源码环境分包发布` / `完整源码环境发布-*` / `完整源码环境发布-自定义`：手动触发单个版本或单个 Android/kernel 系列，拉取完整源码环境并上传 Release，方便补包或重跑失败版本。
+- `完整源码环境分包发布` / `完整源码环境发布-*` / `完整源码环境发布-自定义`：手动触发单个版本或单个 Android/kernel 系列，拉取完整源码环境并上传到自动生成的 Release，方便补包或重跑失败版本。
 - `每月同步内核源码目录 (common/)`：唯一仅获取 `common/` 内核源码目录的 workflow，可手动触发，也会每月 1 日自动执行并推送到对应分支。
 
 ## 🛠 脚本功能

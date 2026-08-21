@@ -37,16 +37,6 @@ on:
         required: true
         type: string
         default: "2022-01"
-      release_tag:
-        description: "上传到的 Release 标签"
-        required: true
-        type: string
-        default: "full-kernel-sources"
-      part_size:
-        description: "分卷大小，需低于 GitHub 单 asset 限制"
-        required: true
-        type: string
-        default: "1800M"
 
 jobs:
   publish-full-source:
@@ -56,5 +46,3 @@ jobs:
       android_version: ${{ inputs.android_version }}
       kernel_version: ${{ inputs.kernel_version }}
       os_patch_level: ${{ inputs.os_patch_level }}
-      release_tag: ${{ inputs.release_tag }}
-      part_size: ${{ inputs.part_size }}

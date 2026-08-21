@@ -36,16 +36,6 @@ on:
         required: true
         type: string
         default: "lts"
-      release_tag:
-        description: "上传到的 Release 标签"
-        required: true
-        type: string
-        default: "full-kernel-sources"
-      part_size:
-        description: "分卷大小，需低于 GitHub 单 asset 限制"
-        required: true
-        type: string
-        default: "1800M"
   workflow_call:
     inputs:
       android_version:
@@ -58,10 +48,7 @@ on:
         required: true
         type: string
       release_tag:
-        required: true
-        type: string
-      part_size:
-        required: true
+        required: false
         type: string
 
 jobs:
@@ -72,8 +59,24 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      PART_SIZE: "1800M"
 
     steps:
+      - name: 设置 Release 参数
+        run: |
+          set -euo pipefail
+
+          INPUT_RELEASE_TAG="${{ inputs.release_tag || '' }}"
+          if [ -n "$INPUT_RELEASE_TAG" ]; then
+            RELEASE_TAG="$INPUT_RELEASE_TAG"
+          else
+            RELEASE_TAG="full-kernel-sources-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}"
+          fi
+
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "分卷大小自动设置为：$PART_SIZE"
+          echo "Release 标签自动设置为：$RELEASE_TAG"
+
       - name: 打印配置摘要
         run: |
           echo "========================================"
@@ -82,8 +85,8 @@ jobs:
           echo "Android 版本  : ${{ inputs.android_version }}"
           echo "内核版本      : ${{ inputs.kernel_version }}"
           echo "补丁级别      : ${{ inputs.os_patch_level }}"
-          echo "Release 标签  : ${{ inputs.release_tag }}"
-          echo "分卷大小      : ${{ inputs.part_size }}"
+          echo "Release 标签  : $RELEASE_TAG"
+          echo "分卷大小      : $PART_SIZE"
           echo "========================================"
 
       - name: 校验版本组合
@@ -203,7 +206,7 @@ jobs:
             "manifest_branch": "$MANIFEST_BRANCH",
             "actual_sublevel": "$ACTUAL_SUBLEVEL",
             "archive": "${BASENAME}.tar.zst",
-            "part_size": "${{ inputs.part_size }}",
+            "part_size": "$PART_SIZE",
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           }
           EOF
@@ -214,7 +217,7 @@ jobs:
 
           cd "$OUT_DIR"
           sha256sum "${BASENAME}.tar.zst" > "${BASENAME}.tar.zst.sha256"
-          split -b "${{ inputs.part_size }}" -d -a 3 "${BASENAME}.tar.zst" "${BASENAME}.tar.zst.part"
+          split -b "$PART_SIZE" -d -a 3 "${BASENAME}.tar.zst" "${BASENAME}.tar.zst.part"
           sha256sum "${BASENAME}.tar.zst.part"* > "${BASENAME}.tar.zst.parts.sha256"
           rm -f "${BASENAME}.tar.zst"
 
@@ -225,13 +228,33 @@ jobs:
         run: |
           set -euo pipefail
 
-          RELEASE_TAG="${{ inputs.release_tag }}"
-          RELEASE_DATE="$(date -u +%Y-%m-%d)"
-          RELEASE_TITLE="全内核源码合集 - ${RELEASE_DATE}"
+          RELEASE_DATE_RAW="$(date -u +%Y%m%d)"
+          if [[ "$RELEASE_TAG" =~ ([0-9]{8})-[0-9]+$ ]]; then
+            RELEASE_DATE_RAW="${BASH_REMATCH[1]}"
+          fi
+          RELEASE_DATE="${RELEASE_DATE_RAW:0:4}-${RELEASE_DATE_RAW:4:2}-${RELEASE_DATE_RAW:6:2}"
 
-          cat > release_notes.md << EOF
+          case "${{ inputs.android_version }}" in
+            android12) ANDROID_LABEL="Android 12" ;;
+            android13) ANDROID_LABEL="Android 13" ;;
+            android14) ANDROID_LABEL="Android 14" ;;
+            android15) ANDROID_LABEL="Android 15" ;;
+            android16) ANDROID_LABEL="Android 16" ;;
+            android17) ANDROID_LABEL="Android 17" ;;
+            *) ANDROID_LABEL="${{ inputs.android_version }}" ;;
+          esac
+
+          if [[ "$RELEASE_TAG" == all-full-kernel-sources-* ]]; then
+            RELEASE_TITLE="全内核源码合集 - ${RELEASE_DATE}"
+            cat > release_notes.md << EOF
           包含 Android 12~17 的 5.10/5.15/6.1/6.6/6.12/6.18 完整内核源码环境分卷，请下载对应版本的所有分卷及校验文件后合并解压。
           EOF
+          else
+            RELEASE_TITLE="${ANDROID_LABEL} (${{ inputs.kernel_version }}) 完整内核源码 - ${RELEASE_DATE}"
+            cat > release_notes.md << EOF
+          包含 ${ANDROID_LABEL} (${{ inputs.kernel_version }}) 的完整内核源码环境分卷，请下载对应版本的所有分卷及校验文件后合并解压。
+          EOF
+          fi
 
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "Release 已存在: $RELEASE_TAG"
@@ -284,9 +307,9 @@ jobs:
         run: |
           {
             echo "## 完整源码环境已上传"
-            echo "- Release: ${{ inputs.release_tag }}"
+            echo "- Release: $RELEASE_TAG"
             echo "- Manifest 分支: $MANIFEST_BRANCH"
             echo "- 实际子版本号: $ACTUAL_SUBLEVEL"
             echo "- 文件前缀: $BASENAME"
-            echo "- 分卷大小: ${{ inputs.part_size }}"
+            echo "- 分卷大小: $PART_SIZE"
           } >> "$GITHUB_STEP_SUMMARY"

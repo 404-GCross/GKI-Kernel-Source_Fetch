@@ -7,16 +7,6 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: "上传到的 Release 标签"
-        required: true
-        type: string
-        default: "all-full-kernel-sources"
-      part_size:
-        description: "分卷大小，需低于 GitHub 单 asset 限制"
-        required: true
-        type: string
-        default: "1800M"
       include_lts:
         description: "是否包含各内核 LTS 分支"
         required: true
@@ -30,6 +20,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       count: ${{ steps.matrix.outputs.count }}
+      release_tag: ${{ steps.matrix.outputs.release_tag }}
 
     steps:
       - name: 检出代码仓库
@@ -41,11 +32,14 @@ jobs:
           set -euo pipefail
 
           python3 << 'PY'
+          import datetime
           import json
           import os
           from pathlib import Path
 
           include_lts = "${{ inputs.include_lts }}" == "true"
+          release_date = datetime.datetime.utcnow().strftime("%Y%m%d")
+          release_tag = f"all-full-kernel-sources-{release_date}-{os.environ['GITHUB_RUN_ID']}"
           data_dir = Path("data")
           order = {
               ("android12", "5.10"): 0,
@@ -88,8 +82,10 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               print(f"matrix={payload}", file=output)
               print(f"count={len(rows)}", file=output)
+              print(f"release_tag={release_tag}", file=output)
 
           print(f"生成 {len(rows)} 个完整源码环境任务")
+          print(f"Release 标签：{release_tag}")
           PY
 
   publish-full-sources:
@@ -106,12 +102,11 @@ jobs:
       android_version: ${{ matrix.android_version }}
       kernel_version: ${{ matrix.kernel_version }}
       os_patch_level: ${{ matrix.os_patch_level }}
-      release_tag: ${{ inputs.release_tag }}
-      part_size: ${{ inputs.part_size }}
+      release_tag: ${{ needs.prepare-matrix.outputs.release_tag }}
 
   update-download-scripts:
     name: 更新下载脚本 Release 指针
-    needs: publish-full-sources
+    needs: [prepare-matrix, publish-full-sources]
     runs-on: ubuntu-latest
 
     steps:
@@ -123,7 +118,7 @@ jobs:
           set -euo pipefail
 
           RELEASE_REPO="${{ github.repository }}"
-          RELEASE_TAG="${{ inputs.release_tag }}"
+          RELEASE_TAG="${{ needs.prepare-matrix.outputs.release_tag }}"
 
           git pull --rebase origin "${GITHUB_REF_NAME}"
 

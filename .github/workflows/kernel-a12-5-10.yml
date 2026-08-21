@@ -5,28 +5,12 @@ permissions:
   actions: write
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: "上传到的 Release 标签"
-        required: true
-        type: string
-        default: "full-kernel-sources"
-      part_size:
-        description: "分卷大小，需低于 GitHub 单 asset 限制"
-        required: true
-        type: string
-        default: "1800M"
+  workflow_dispatch: {}
   workflow_call:
     inputs:
       release_tag:
         required: false
         type: string
-        default: "full-kernel-sources"
-      part_size:
-        required: false
-        type: string
-        default: "1800M"
       kernelsu_variant:
         required: false
         type: string
@@ -67,7 +51,22 @@ on:
         default: false
 
 jobs:
+  prepare-release:
+    name: 生成 Release 标签
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: 生成 Release 标签
+        id: release
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="android12-5.10-full-sources-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Release 标签：${RELEASE_TAG}"
+
   publish-sources:
+    needs: prepare-release
     name: "5.10.${{ matrix.sub_level }}-${{ matrix.os_patch_level }}"
     strategy:
       fail-fast: false
@@ -126,5 +125,4 @@ jobs:
       android_version: "android12"
       kernel_version: "5.10"
       os_patch_level: ${{ matrix.os_patch_level }}
-      release_tag: ${{ inputs.release_tag || 'full-kernel-sources' }}
-      part_size: ${{ inputs.part_size || '1800M' }}
+      release_tag: ${{ inputs.release_tag || needs.prepare-release.outputs.release_tag }}
