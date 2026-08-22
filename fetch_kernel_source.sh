@@ -10,7 +10,7 @@ set -euo pipefail
 
 # -------------------- Fixed repository and tag --------------------
 REPO="404-GCross/GKI-Kernel-Source_Fetch"
-TAG="all-full-kernel-sources"
+TAG="all-full-kernel-sources-20260821-32436876080"
 # --------------------------------------------------------
 
 BASE_RAW="https://github.com/${REPO}/releases/download/${TAG}"
