@@ -1,0 +1,59 @@
+# How to use this file: http://go/approve-abi-break
+# ABI freeze commit: 0690b3438b4acb24f7ecfd946cf9a9ac5954ef20
+
+type 'enum prs_errcode' changed
+  enumerator 'PERR_REMOTE' (10) was added
+
+type 'struct sched_dl_entity' changed
+  member 'unsigned int dl_server_idle:1' was added
+
+type 'struct f2fs_sb_info' changed
+  member 'union { unsigned int reserved_pin_section; unsigned char __kabi_ignored0; }' was added
+
+type 'enum gunyah_rm_vm_status' changed
+  enumerator 'GUNYAH_RM_VM_STATUS_RESET_FAILED' (12) was added
+
+6 function symbol(s) removed
+  'int __traceiter_f2fs_gc_begin(void*, struct super_block*, int, bool, unsigned int, long long, long long, long long, unsigned int, unsigned int, int, unsigned int)'
+  'int __traceiter_f2fs_gc_end(void*, struct super_block*, int, int, int, long long, long long, long long, unsigned int, unsigned int, int, unsigned int)'
+  'int __traceiter_f2fs_sync_file_enter(void*, struct inode*)'
+  'int __traceiter_f2fs_sync_file_exit(void*, struct inode*, int, int, int)'
+  'int __traceiter_f2fs_write_checkpoint(void*, struct super_block*, int, const char*)'
+  'int __traceiter_ufshcd_command(void*, struct scsi_device*, struct ufs_hba*, enum ufs_trace_str_t, unsigned int, u32, u32, int, u32, u64, u8, u8)'
+
+6 variable symbol(s) removed
+  'struct tracepoint __tracepoint_f2fs_gc_begin'
+  'struct tracepoint __tracepoint_f2fs_gc_end'
+  'struct tracepoint __tracepoint_f2fs_sync_file_enter'
+  'struct tracepoint __tracepoint_f2fs_sync_file_exit'
+  'struct tracepoint __tracepoint_f2fs_write_checkpoint'
+  'struct tracepoint __tracepoint_ufshcd_command'
+
+type 'struct inet_connection_sock' changed
+  member changed from 'struct { __u8 pending; __u8 quick; __u8 pingpong; __u8 retry; __u32 ato:8; __u32 lrcv_flowlabel:20; __u32 unused:4; unsigned long timeout; __u32 lrcvtime; __u16 last_seg_size; __u16 rcv_mss; } icsk_ack' to 'struct { __u8 pending; __u8 quick; __u8 pingpong; __u8 retry; __u32 ato:8; __u32 lrcv_flowlabel:20; __u32 dst_quick_ack:1; __u32 unused:3; unsigned long timeout; __u32 lrcvtime; __u16 last_seg_size; __u16 rcv_mss; } icsk_ack'
+    type changed from 'struct { __u8 pending; __u8 quick; __u8 pingpong; __u8 retry; __u32 ato:8; __u32 lrcv_flowlabel:20; __u32 unused:4; unsigned long timeout; __u32 lrcvtime; __u16 last_seg_size; __u16 rcv_mss; }' to 'struct { __u8 pending; __u8 quick; __u8 pingpong; __u8 retry; __u32 ato:8; __u32 lrcv_flowlabel:20; __u32 dst_quick_ack:1; __u32 unused:3; unsigned long timeout; __u32 lrcvtime; __u16 last_seg_size; __u16 rcv_mss; }'
+      member '__u32 dst_quick_ack:1' was added
+      member changed from '__u32 unused:4' to '__u32 unused:3'
+        offset changed from 60 to 61
+        bit-field size changed from 4 to 3
+
+variable symbol changed from 'u64 vendor_data_pad[64]' to 'u64 vendor_data_pad[128]'
+  type changed from 'u64[64]' to 'u64[128]'
+    number of elements changed from 64 to 128
+
+type 'struct task_struct' changed
+  member 'u64 __kabi_reserved2' was removed
+  member 'union { cpumask_var_t cpumask_sme_dvmsync; struct { u64 __kabi_reserved2; }; union { }; }' was added
+
+type 'struct bindings::bindings_raw::task_struct' changed
+  member 'u64 __kabi_reserved2' was removed
+  member 'union bindings::bindings_raw::task_struct__bindgen_ty_1 __bindgen_anon_1' was added
+
+type 'struct task_struct' changed
+  member 'union { cpumask_var_t cpumask_sme_dvmsync; struct { u64 __kabi_reserved2; }; union { }; }' was removed
+  member 'union { u64 __donotuse_b448672457; struct { u64 __kabi_reserved2; }; union { }; }' was added
+
+type 'union bindings::bindings_raw::task_struct__bindgen_ty_2' changed
+  member 'struct bindings::bindings_raw::cpumask cpumask_sme_dvmsync[1]' was removed
+  member 'u64 __donotuse_b448672457' was added
+
