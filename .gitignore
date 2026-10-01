@@ -1,0 +1,15 @@
+*.o
+*.ko
+*.mod
+*.mod.c
+*.symvers
+*.order
+*.builtin
+*.tmp_*
+.tmp_vmlinux*
+vmlinux
+vmlinux.o
+System.map
+Module.symvers
+modules.builtin
+modules.order
